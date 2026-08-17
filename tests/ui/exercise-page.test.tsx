@@ -88,4 +88,17 @@ describe('ExercisePage', () => {
     expect(repository.remove).not.toHaveBeenCalled();
     expect(screen.getByText('Жим лёжа')).toBeInTheDocument();
   });
+
+  it('shows an error and keeps the exercise when deletion fails', async () => {
+    const repository = createRepository([exercise]);
+    repository.remove.mockRejectedValue(new Error('IndexedDB unavailable'));
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    render(<ExercisePage repository={repository} />);
+
+    await screen.findByText('Жим лёжа');
+    fireEvent.click(screen.getByRole('button', { name: 'Удалить Жим лёжа' }));
+
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Не удалось удалить упражнение'));
+    expect(screen.getByText('Жим лёжа')).toBeInTheDocument();
+  });
 });
