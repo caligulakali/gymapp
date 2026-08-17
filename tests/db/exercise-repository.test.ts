@@ -1,5 +1,7 @@
 import 'fake-indexeddb/auto';
+import Dexie from 'dexie';
 import { afterEach, describe, expect, it } from 'vitest';
+import { closeDatabase } from '../../src/db/database';
 import { resetDatabase, exerciseRepository } from '../../src/db/exercise-repository';
 
 const exercise = {
@@ -44,5 +46,28 @@ describe('exerciseRepository', () => {
     await exerciseRepository.remove(exercise.id);
 
     await expect(exerciseRepository.getAll()).resolves.toEqual([]);
+  });
+
+  it('reads the same record after the database connection is reopened', async () => {
+    await exerciseRepository.save(exercise);
+    await closeDatabase();
+
+    await expect(exerciseRepository.getById(exercise.id)).resolves.toEqual(exercise);
+  });
+
+  it('migrates legacy records by adding the favourite flag', async () => {
+    const legacyDatabase = new Dexie('gymapp');
+    legacyDatabase.version(1).stores({ exercises: 'id, name, muscleGroup, type' });
+    await legacyDatabase.open();
+    await legacyDatabase.table('exercises').put({
+      id: exercise.id,
+      name: exercise.name,
+      muscleGroup: exercise.muscleGroup,
+      type: exercise.type,
+      unit: exercise.unit
+    });
+    legacyDatabase.close();
+
+    await expect(exerciseRepository.getById(exercise.id)).resolves.toMatchObject({ favourite: false });
   });
 });
