@@ -102,7 +102,7 @@ export function ExercisePage({ repository, createId = makeId, onSelectExercise, 
         <p className="eyebrow">Справочник</p>
         <h2 id="exercise-page-title">Упражнения</h2>
         <p>Создайте свой список упражнений для быстрых тренировок.</p>
-        {onBack && <button type="button" onClick={onBack}>Вернуться к шаблону</button>}
+        {onBack && <button className="ghost-button back-button" type="button" onClick={onBack}><span aria-hidden="true">←</span> Вернуться к шаблону</button>}
       </div>
       <form className="exercise-form" onSubmit={handleSubmit}>
         <label>Название<input aria-label="Название" value={form.name} onChange={(event) => updateForm('name', event.target.value)} /></label>
@@ -112,12 +112,12 @@ export function ExercisePage({ repository, createId = makeId, onSelectExercise, 
         <label>Заметки<textarea aria-label="Заметки" value={form.notes} onChange={(event) => updateForm('notes', event.target.value)} /></label>
         <label className="checkbox-label"><input type="checkbox" aria-label="Избранное" checked={form.favourite} onChange={(event) => updateForm('favourite', event.target.checked)} /> Избранное</label>
         {error && <p role="alert">{error}</p>}
-        <button type="submit">{editingId ? 'Сохранить изменения' : 'Сохранить упражнение'}</button>
+        <button className="primary-submit save-exercise-button" type="submit"><span aria-hidden="true">✓</span> {editingId ? 'Сохранить изменения' : 'Сохранить упражнение'}</button>
       </form>
       <ul className="exercise-list" aria-label="Список упражнений">
         {exercises.map((exercise) => <li key={exercise.id}>
           <div><strong>{exercise.favourite ? '★ ' : ''}{exercise.name}</strong>{exercise.notes && <small>{exercise.notes}</small>}</div>
-          <div className="item-actions">{onSelectExercise && <button type="button" aria-label={`Выбрать ${exercise.name}`} onClick={() => onSelectExercise(exercise)}>Выбрать</button>}<button type="button" aria-label={`Редактировать ${exercise.name}`} onClick={() => startEditing(exercise)}>Изменить</button><button type="button" aria-label={`Удалить ${exercise.name}`} onClick={() => void handleDelete(exercise)}>Удалить</button></div>
+          <div className="item-actions">{onSelectExercise && <button className="secondary-button" type="button" aria-label={`Выбрать ${exercise.name}`} onClick={() => onSelectExercise(exercise)}>Выбрать</button>}<button className="ghost-button" type="button" aria-label={`Редактировать ${exercise.name}`} onClick={() => startEditing(exercise)}>Изменить</button><button className="ghost-button danger-button" type="button" aria-label={`Удалить ${exercise.name}`} onClick={() => void handleDelete(exercise)}>Удалить</button></div>
         </li>)}
       </ul>
     </section>

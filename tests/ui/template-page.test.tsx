@@ -37,6 +37,14 @@ function createRepositories(templates: Template[] = []) {
 afterEach(() => vi.restoreAllMocks());
 
 describe('TemplatePage', () => {
+  it('uses a clear hierarchy for template actions', async () => {
+    const repositories = createRepositories();
+    render(<TemplatePage {...repositories} />);
+
+    expect(await screen.findByRole('button', { name: 'Добавить упражнение в шаблон' })).toHaveClass('secondary-button');
+    expect(screen.getByRole('button', { name: 'Сохранить шаблон' })).toHaveClass('primary-submit');
+  });
+
   it('opens exercise selection and adds the chosen exercise as an editable template card', async () => {
     const repositories = createRepositories();
     render(<TemplatePage {...repositories} />);

@@ -148,7 +148,7 @@ export function TemplatePage({ templateRepository, exerciseRepository, createId 
       <form className="template-form" onSubmit={handleSubmit}>
         <label>Название шаблона<input aria-label="Название шаблона" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
         <label>Заметки шаблона<textarea aria-label="Заметки шаблона" value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} /></label>
-        <button type="button" onClick={() => setIsSelectingExercise(true)}>Добавить упражнение в шаблон</button>
+        <button className="secondary-button add-exercise-button" type="button" onClick={() => setIsSelectingExercise(true)}><span aria-hidden="true">＋</span> Добавить упражнение в шаблон</button>
         <div className="template-exercise-list" aria-label="Упражнения шаблона">{form.exercises.map((item, index) => {
           const exercise = exercises.find((candidate) => candidate.id === item.exerciseId);
           const name = exercise?.name ?? item.exerciseId;
@@ -158,14 +158,14 @@ export function TemplatePage({ templateRepository, exerciseRepository, createId 
             <label>Повторы для {name}<input aria-label={`Повторы для ${name}`} type="number" min="1" value={item.targetReps ?? ''} onChange={(event) => updateExerciseTarget(index, 'targetReps', event.target.value)} /></label>
             <label>Вес для {name}<input aria-label={`Вес для ${name}`} type="number" min="0" step="0.5" value={item.targetWeight ?? ''} onChange={(event) => updateExerciseTarget(index, 'targetWeight', event.target.value)} /></label>
             <div className="template-card-actions">
-              <button type="button" aria-label={`Удалить ${name} из шаблона`} onClick={() => removeExercise(index)}>Убрать</button>
+              <button className="ghost-button danger-button" type="button" aria-label={`Удалить ${name} из шаблона`} onClick={() => removeExercise(index)}>Убрать</button>
             </div>
           </article>;
         })}</div>
         {error && <p role="alert">{error}</p>}
-        <button type="submit">{editingId ? 'Сохранить изменения шаблона' : 'Сохранить шаблон'}</button>
+        <button className="primary-submit save-template-button" type="submit"><span aria-hidden="true">✓</span> {editingId ? 'Сохранить изменения шаблона' : 'Сохранить шаблон'}</button>
       </form>
-      <ul className="template-list" aria-label="Список шаблонов">{templates.map((template) => <li key={template.id}><div><strong>{template.name}</strong><small>{template.exercises.length} упр.</small></div><div className="item-actions"><button type="button" aria-label={`Редактировать шаблон ${template.name}`} onClick={() => startEditing(template)}>Изменить</button><button type="button" aria-label={`Дублировать шаблон ${template.name}`} onClick={() => void duplicateTemplate(template)}>Дублировать</button><button type="button" aria-label={`Удалить шаблон ${template.name}`} onClick={() => void handleDelete(template)}>Удалить</button></div></li>)}</ul>
+      <ul className="template-list" aria-label="Список шаблонов">{templates.map((template) => <li key={template.id}><div><strong>{template.name}</strong><small>{template.exercises.length} упр.</small></div><div className="item-actions"><button className="ghost-button" type="button" aria-label={`Редактировать шаблон ${template.name}`} onClick={() => startEditing(template)}>Изменить</button><button className="secondary-button" type="button" aria-label={`Дублировать шаблон ${template.name}`} onClick={() => void duplicateTemplate(template)}>Дублировать</button><button className="ghost-button danger-button" type="button" aria-label={`Удалить шаблон ${template.name}`} onClick={() => void handleDelete(template)}>Удалить</button></div></li>)}</ul>
     </section>
   );
 }
