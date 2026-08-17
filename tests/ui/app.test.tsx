@@ -22,4 +22,24 @@ describe('App', () => {
 
     expect(screen.getByRole('heading', { name: 'Упражнения' })).toBeInTheDocument();
   });
+
+  it('opens the templates section from the main navigation', () => {
+    const repositories = {
+      exerciseRepository: {
+        getAll: vi.fn().mockResolvedValue([]),
+        save: vi.fn().mockResolvedValue(undefined),
+        remove: vi.fn().mockResolvedValue(undefined)
+      },
+      templateRepository: {
+        getAll: vi.fn().mockResolvedValue([]),
+        save: vi.fn().mockResolvedValue(undefined),
+        remove: vi.fn().mockResolvedValue(undefined)
+      }
+    };
+    render(<App {...repositories} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Шаблоны' }));
+
+    expect(screen.getByRole('heading', { name: 'Шаблоны' })).toBeInTheDocument();
+  });
 });
