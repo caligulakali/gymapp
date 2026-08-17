@@ -28,6 +28,15 @@ describe('exercise service', () => {
     );
   });
 
+  it('returns validation errors for malformed text values', () => {
+    expect(validateExerciseDraft({ ...draft, name: null as never })).toContain(
+      'Название упражнения не может быть пустым'
+    );
+    expect(validateExerciseDraft({ ...draft, notes: 42 as never })).toContain(
+      'Заметка упражнения указана неверно'
+    );
+  });
+
   it('normalizes user text and creates a stable exercise entity', () => {
     const first = createExercise(draft, 'exercise-1');
     const second = createExercise(draft, 'exercise-1');
@@ -47,6 +56,12 @@ describe('exercise service', () => {
   it('rejects invalid drafts before persistence', () => {
     expect(() => createExercise({ ...draft, name: ' ' }, 'exercise-1')).toThrow(
       'Название упражнения не может быть пустым'
+    );
+  });
+
+  it('rejects an empty stable identifier', () => {
+    expect(() => createExercise(draft, '  ')).toThrow(
+      'Идентификатор упражнения не может быть пустым'
     );
   });
 });
