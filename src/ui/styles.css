@@ -32,3 +32,15 @@ h1 { margin: 0; font-size: clamp(2.5rem, 12vw, 4.5rem); line-height: 1; }
 .exercise-list small { margin-top: 0.3rem; color: #9ca3af; }
 .item-actions { display: flex; gap: 0.5rem; }
 .item-actions button { padding: 0.6rem 0.75rem; color: #d1d5db; background: #374151; }
+.template-page { width: min(100%, 44rem); margin: 0 auto; }
+.template-page h2 { margin: 0; font-size: 2.2rem; }
+.template-form { display: grid; gap: 1rem; margin: 2rem 0; padding: 1.25rem; border: 1px solid #374151; border-radius: 1rem; background: #1f2937; }
+.template-form label { display: grid; gap: 0.4rem; color: #d1d5db; font-size: 0.9rem; font-weight: 600; }
+.template-form input, .template-form select, .template-form textarea { width: 100%; border: 1px solid #4b5563; border-radius: 0.6rem; padding: 0.75rem; color: #f9fafb; background: #111827; font: inherit; }
+.template-form textarea { min-height: 4rem; resize: vertical; }
+.template-form [role='alert'] { margin: 0; color: #fca5a5; }
+.template-exercise-list, .template-list { display: grid; gap: 0.75rem; padding: 0; list-style: none; }
+.template-exercise-list li { padding: 0.65rem; border-radius: 0.5rem; color: #d1d5db; background: #374151; }
+.template-list li { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem; border: 1px solid #374151; border-radius: 0.85rem; background: #1f2937; }
+.template-list strong, .template-list small { display: block; }
+.template-list small { margin-top: 0.3rem; color: #9ca3af; }
