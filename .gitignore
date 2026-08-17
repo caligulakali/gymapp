@@ -27,6 +27,11 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# Personal working documents (spec and agent rules — local only)
+PROJECT_SPEC.md
+AGENTS.md
+ARCHITECTURE.md
+
 # Environment variables (secrets)
 .env
 .env.*
@@ -46,7 +51,3 @@ pnpm-debug.log*
 .DS_Store
 Thumbs.db
 
-# Personal working documents (spec and agent rules — local only)
-PROJECT_SPEC.md
-AGENTS.md
-ARCHITECTURE.md
