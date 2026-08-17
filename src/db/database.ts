@@ -7,6 +7,13 @@ export class GymAppDatabase extends Dexie {
   constructor() {
     super('gymapp');
     this.version(1).stores({ exercises: 'id, name, muscleGroup, type, favourite' });
+    this.version(2)
+      .stores({ exercises: 'id, name, muscleGroup, type, favourite' })
+      .upgrade(async (transaction) => {
+        await transaction.table('exercises').toCollection().modify((record: Partial<Exercise>) => {
+          record.favourite ??= false;
+        });
+      });
   }
 }
 
