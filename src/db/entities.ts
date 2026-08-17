@@ -11,3 +11,18 @@ export interface Exercise {
   notes?: string;
   favourite: boolean;
 }
+
+export interface TemplateExercise {
+  exerciseId: string;
+  order: number;
+  sets: number;
+  targetReps?: number;
+  targetWeight?: number;
+}
+
+export interface Template {
+  id: string;
+  name: string;
+  notes?: string;
+  exercises: TemplateExercise[];
+}
