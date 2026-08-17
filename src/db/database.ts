@@ -1,8 +1,9 @@
 import Dexie, { type Table } from 'dexie';
-import type { Exercise } from './entities';
+import type { Exercise, Template } from './entities';
 
 export class GymAppDatabase extends Dexie {
   exercises!: Table<Exercise, string>;
+  templates!: Table<Template, string>;
 
   constructor() {
     super('gymapp');
@@ -14,6 +15,10 @@ export class GymAppDatabase extends Dexie {
           record.favourite ??= false;
         });
       });
+    this.version(3).stores({
+      exercises: 'id, name, muscleGroup, type, favourite',
+      templates: 'id, name'
+    });
   }
 }
 
