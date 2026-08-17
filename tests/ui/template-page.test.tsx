@@ -75,6 +75,22 @@ describe('TemplatePage', () => {
     }));
   });
 
+  it('duplicates an existing template with a new id', async () => {
+    const repositories = createRepositories([template]);
+    const createId = vi.fn().mockReturnValue('template-copy');
+    render(<TemplatePage {...repositories} createId={createId} />);
+
+    await screen.findByText('Ноги');
+    fireEvent.click(screen.getByRole('button', { name: 'Дублировать шаблон Ноги' }));
+
+    await waitFor(() => expect(repositories.templateRepository.save).toHaveBeenCalledWith({
+      ...template,
+      id: 'template-copy',
+      name: 'Ноги — копия'
+    }));
+    expect(createId).toHaveBeenCalledOnce();
+  });
+
   it('confirms deletion of a template', async () => {
     const repositories = createRepositories([template]);
     vi.spyOn(window, 'confirm').mockReturnValue(true);
