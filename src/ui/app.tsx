@@ -1,32 +1,27 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { exerciseRepository } from '../db/exercise-repository';
 import { templateRepository } from '../db/template-repository';
+import { workoutRepository } from '../db/workout-repository';
 import type { ExerciseRepositoryPort } from '../domain/exercise-repository-port';
 import type { TemplateRepositoryPort } from '../domain/template-repository-port';
+import type { WorkoutRepositoryPort } from '../domain/workout-repository-port';
+import { DashboardPage } from './dashboard-page';
+import { HistoryPage } from './history-page';
+import { ProgressPage } from './progress-page';
 import { ExercisePage } from './exercises/exercise-page';
 import { TemplatePage } from './templates/template-page';
+import { WorkoutPage } from './workouts/workout-page';
 
-type AppProps = {
-  exerciseRepository?: ExerciseRepositoryPort;
-  templateRepository?: TemplateRepositoryPort;
-};
+type Section = 'home' | 'history' | 'progress' | 'exercises' | 'templates' | 'workout';
+type AppProps = { exerciseRepository?: ExerciseRepositoryPort; templateRepository?: TemplateRepositoryPort; workoutRepository?: WorkoutRepositoryPort };
+const navItems: { id: Section; label: string; icon: string }[] = [{ id: 'home', label: 'Обзор', icon: '⌂' }, { id: 'history', label: 'История', icon: '▤' }, { id: 'progress', label: 'Прогресс', icon: '↗' }, { id: 'exercises', label: 'Упражнения', icon: '⊙' }, { id: 'templates', label: 'Шаблоны', icon: '▦' }];
 
-export function App({ exerciseRepository: repository = exerciseRepository, templateRepository: templates = templateRepository }: AppProps) {
-  const [activeSection, setActiveSection] = useState<'home' | 'exercises' | 'templates'>('home');
-
-  return (
-    <main className="app-shell">
-      <nav className="app-nav" aria-label="Основная навигация">
-        <button type="button" onClick={() => setActiveSection('home')}>Главная</button>
-        <button type="button" onClick={() => setActiveSection('exercises')}>Упражнения</button>
-        <button type="button" onClick={() => setActiveSection('templates')}>Шаблоны</button>
-      </nav>
-      {activeSection === 'home' ? <section className="welcome-card" aria-labelledby="app-title">
-        <p className="eyebrow">Личный журнал</p>
-        <h1 id="app-title">GymApp</h1>
-        <p className="welcome-copy">Тренируйся. Записывай. Расти.</p>
-        <button type="button">Начать тренировку</button>
-      </section> : activeSection === 'exercises' ? <ExercisePage repository={repository} /> : <TemplatePage templateRepository={templates} exerciseRepository={repository} />}
-    </main>
-  );
+export function App({ exerciseRepository: exercises = exerciseRepository, templateRepository: templates = templateRepository, workoutRepository: workouts = workoutRepository }: AppProps) {
+  const [section, setSection] = useState<Section>('home');
+  const [workoutList, setWorkoutList] = useState<Awaited<ReturnType<WorkoutRepositoryPort['getAll']>>>([]);
+  useEffect(() => { void workouts.getAll().then(setWorkoutList).catch(() => setWorkoutList([])); }, [workouts]);
+  const navigate = (next: Section) => setSection(next);
+  const page = section === 'home' ? <DashboardPage workouts={workoutList} onStartWorkout={() => navigate('workout')} onNavigate={navigate} /> : section === 'history' ? <HistoryPage workouts={workoutList} /> : section === 'progress' ? <ProgressPage workouts={workoutList} /> : section === 'exercises' ? <ExercisePage repository={exercises} /> : section === 'templates' ? <TemplatePage templateRepository={templates} exerciseRepository={exercises} /> : <WorkoutPage workoutRepository={workouts} templateRepository={templates} exerciseRepository={exercises} createId={() => crypto.randomUUID()} now={() => new Date().toISOString()} onSaved={() => { void workouts.getAll().then(setWorkoutList); navigate('history'); }} />;
+  const renderNav = (mobile = false) => <nav aria-label={mobile ? 'Мобильная навигация' : 'Основная навигация'} aria-hidden={mobile || undefined}>{navItems.slice(0, mobile ? 4 : 5).map((item) => <button aria-label={item.label} className={section === item.id ? 'nav-item active' : 'nav-item'} key={item.id} type="button" onClick={() => navigate(item.id)}><span aria-hidden="true">{item.icon}</span>{item.label}</button>)}</nav>;
+  return <main className="app-shell"><h1 className="sr-only">GymApp</h1><aside className="sidebar"><div className="brand"><span className="brand-mark">G</span><span>GYM<span>APP</span></span></div><p className="sidebar-label">МЕНЮ</p>{renderNav()}<div className="sidebar-bottom"><div className="privacy-note"><span>◈</span><div><strong>Локально и приватно</strong><small>Данные только на этом устройстве</small></div></div></div></aside><div className="app-main"><header className="mobile-header"><div className="brand"><span className="brand-mark">G</span><span>GYM<span>APP</span></span></div></header>{page}</div><div className="mobile-nav">{renderNav(true)}</div></main>;
 }
