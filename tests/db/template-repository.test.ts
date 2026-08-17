@@ -1,6 +1,7 @@
 import 'fake-indexeddb/auto';
+import Dexie from 'dexie';
 import { afterEach, describe, expect, it } from 'vitest';
-import { resetDatabase } from '../../src/db/exercise-repository';
+import { exerciseRepository, resetDatabase } from '../../src/db/exercise-repository';
 import { templateRepository } from '../../src/db/template-repository';
 
 const template = {
@@ -42,5 +43,31 @@ describe('templateRepository', () => {
     await templateRepository.remove(template.id);
 
     await expect(templateRepository.getAll()).resolves.toEqual([]);
+  });
+
+  it('migrates a v2 database while preserving exercises and adding templates', async () => {
+    const legacyDatabase = new Dexie('gymapp');
+    legacyDatabase.version(2).stores({ exercises: 'id, name, muscleGroup, type, favourite' });
+    await legacyDatabase.open();
+    await legacyDatabase.table('exercises').put({
+      id: 'exercise-1',
+      name: 'Приседания',
+      muscleGroup: 'legs',
+      type: 'strength',
+      unit: 'kg',
+      favourite: false
+    });
+    legacyDatabase.close();
+
+    await expect(exerciseRepository.getById('exercise-1')).resolves.toEqual({
+      id: 'exercise-1',
+      name: 'Приседания',
+      muscleGroup: 'legs',
+      type: 'strength',
+      unit: 'kg',
+      favourite: false
+    });
+    await templateRepository.save(template);
+    await expect(templateRepository.getById(template.id)).resolves.toEqual(template);
   });
 });

@@ -58,6 +58,8 @@ describe('template service', () => {
   });
 
   it('returns errors for malformed runtime values', () => {
+    expect(validateTemplateDraft(null as never)).toContain('Шаблон указан неверно');
+    expect(validateTemplateDraft(undefined as never)).toContain('Шаблон указан неверно');
     expect(validateTemplateDraft({ ...draft, name: null as never })).toContain(
       'Название шаблона не может быть пустым'
     );
