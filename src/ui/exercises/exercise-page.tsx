@@ -6,6 +6,8 @@ import type { ExerciseRepositoryPort } from '../../domain/exercise-repository-po
 type ExercisePageProps = {
   repository: ExerciseRepositoryPort;
   createId?: () => string;
+  onSelectExercise?: (exercise: Exercise) => void;
+  onBack?: () => void;
 };
 
 type FormState = ExerciseDraft & { favourite: boolean };
@@ -31,7 +33,7 @@ function makeId(): string {
   return crypto.randomUUID();
 }
 
-export function ExercisePage({ repository, createId = makeId }: ExercisePageProps) {
+export function ExercisePage({ repository, createId = makeId, onSelectExercise, onBack }: ExercisePageProps) {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [editingId, setEditingId] = useState<string | undefined>();
@@ -100,6 +102,7 @@ export function ExercisePage({ repository, createId = makeId }: ExercisePageProp
         <p className="eyebrow">Справочник</p>
         <h2 id="exercise-page-title">Упражнения</h2>
         <p>Создайте свой список упражнений для быстрых тренировок.</p>
+        {onBack && <button type="button" onClick={onBack}>Вернуться к шаблону</button>}
       </div>
       <form className="exercise-form" onSubmit={handleSubmit}>
         <label>Название<input aria-label="Название" value={form.name} onChange={(event) => updateForm('name', event.target.value)} /></label>
@@ -114,7 +117,7 @@ export function ExercisePage({ repository, createId = makeId }: ExercisePageProp
       <ul className="exercise-list" aria-label="Список упражнений">
         {exercises.map((exercise) => <li key={exercise.id}>
           <div><strong>{exercise.favourite ? '★ ' : ''}{exercise.name}</strong>{exercise.notes && <small>{exercise.notes}</small>}</div>
-          <div className="item-actions"><button type="button" aria-label={`Редактировать ${exercise.name}`} onClick={() => startEditing(exercise)}>Изменить</button><button type="button" aria-label={`Удалить ${exercise.name}`} onClick={() => void handleDelete(exercise)}>Удалить</button></div>
+          <div className="item-actions">{onSelectExercise && <button type="button" aria-label={`Выбрать ${exercise.name}`} onClick={() => onSelectExercise(exercise)}>Выбрать</button>}<button type="button" aria-label={`Редактировать ${exercise.name}`} onClick={() => startEditing(exercise)}>Изменить</button><button type="button" aria-label={`Удалить ${exercise.name}`} onClick={() => void handleDelete(exercise)}>Удалить</button></div>
         </li>)}
       </ul>
     </section>

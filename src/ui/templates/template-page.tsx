@@ -3,10 +3,11 @@ import { createTemplate, type TemplateDraft } from '../../domain/template-servic
 import type { Exercise, Template, TemplateExercise } from '../../db/entities';
 import type { ExerciseRepositoryPort } from '../../domain/exercise-repository-port';
 import type { TemplateRepositoryPort } from '../../domain/template-repository-port';
+import { ExercisePage } from '../exercises/exercise-page';
 
 type TemplatePageProps = {
   templateRepository: TemplateRepositoryPort;
-  exerciseRepository: Pick<ExerciseRepositoryPort, 'getAll'>;
+  exerciseRepository: ExerciseRepositoryPort;
   createId?: () => string;
 };
 
@@ -22,10 +23,7 @@ export function TemplatePage({ templateRepository, exerciseRepository, createId 
   const [templates, setTemplates] = useState<Template[]>([]);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
-  const [selectedExerciseId, setSelectedExerciseId] = useState('');
-  const [sets, setSets] = useState('');
-  const [targetReps, setTargetReps] = useState('');
-  const [targetWeight, setTargetWeight] = useState('');
+  const [isSelectingExercise, setIsSelectingExercise] = useState(false);
   const [editingId, setEditingId] = useState<string | undefined>();
   const [error, setError] = useState<string | undefined>();
 
@@ -35,28 +33,55 @@ export function TemplatePage({ templateRepository, exerciseRepository, createId 
       if (!active) return;
       setTemplates(loadedTemplates);
       setExercises(loadedExercises);
-      setSelectedExerciseId(loadedExercises[0]?.id ?? '');
     }).catch(() => {
       if (active) setError('Не удалось загрузить шаблоны и упражнения');
     });
     return () => { active = false; };
   }, [templateRepository, exerciseRepository]);
 
-  function addExercise() {
-    if (!selectedExerciseId) return;
+  function selectExercise(exercise: Exercise) {
+    if (form.exercises.some((item) => item.exerciseId === exercise.id)) {
+      setError('Это упражнение уже добавлено в шаблон');
+      setIsSelectingExercise(false);
+      return;
+    }
     setForm((current) => ({
       ...current,
       exercises: [...current.exercises, {
-        exerciseId: selectedExerciseId,
+        exerciseId: exercise.id,
         order: current.exercises.length,
-        sets: Number(sets),
-        ...(targetReps ? { targetReps: Number(targetReps) } : {}),
-        ...(targetWeight ? { targetWeight: Number(targetWeight) } : {})
+        sets: 3,
+        targetReps: 8
       }]
     }));
-    setSets('');
-    setTargetReps('');
-    setTargetWeight('');
+    setExercises((current) => current.some((item) => item.id === exercise.id) ? current : [...current, exercise]);
+    setIsSelectingExercise(false);
+  }
+
+  function updateExerciseTarget(index: number, key: 'sets' | 'targetReps' | 'targetWeight', value: string) {
+    setForm((current) => ({
+      ...current,
+      exercises: current.exercises.map((item, itemIndex) => {
+        if (itemIndex !== index) return item;
+        if (!value) {
+          if (key === 'sets') return item;
+          if (key === 'targetReps') {
+            const { targetReps: _targetReps, ...rest } = item;
+            return rest;
+          }
+          const { targetWeight: _targetWeight, ...rest } = item;
+          return rest;
+        }
+        return { ...item, [key]: Number(value) };
+      })
+    }));
+  }
+
+  function removeExercise(index: number) {
+    setForm((current) => ({
+      ...current,
+      exercises: current.exercises.filter((_, itemIndex) => itemIndex !== index).map((item, order) => ({ ...item, order }))
+    }));
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -109,6 +134,10 @@ export function TemplatePage({ templateRepository, exerciseRepository, createId 
     }
   }
 
+  if (isSelectingExercise) {
+    return <ExercisePage repository={exerciseRepository} onSelectExercise={selectExercise} onBack={() => setIsSelectingExercise(false)} />;
+  }
+
   return (
     <section className="template-page" aria-labelledby="template-page-title">
       <div className="page-heading">
@@ -119,12 +148,18 @@ export function TemplatePage({ templateRepository, exerciseRepository, createId 
       <form className="template-form" onSubmit={handleSubmit}>
         <label>Название шаблона<input aria-label="Название шаблона" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
         <label>Заметки шаблона<textarea aria-label="Заметки шаблона" value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} /></label>
-        <label>Упражнение<select aria-label="Упражнение" value={selectedExerciseId} onChange={(event) => setSelectedExerciseId(event.target.value)}>{exercises.map((exercise) => <option key={exercise.id} value={exercise.id}>{exercise.name}</option>)}</select></label>
-        <label>Количество подходов<input aria-label="Количество подходов" type="number" min="1" value={sets} onChange={(event) => setSets(event.target.value)} /></label>
-        <label>Целевые повторения<input aria-label="Целевые повторения" type="number" min="1" value={targetReps} onChange={(event) => setTargetReps(event.target.value)} /></label>
-        <label>Целевой вес<input aria-label="Целевой вес" type="number" min="0" step="0.5" value={targetWeight} onChange={(event) => setTargetWeight(event.target.value)} /></label>
-        <button type="button" onClick={addExercise}>Добавить упражнение</button>
-        <ul className="template-exercise-list" aria-label="Упражнения шаблона">{form.exercises.map((item) => <li key={`${item.exerciseId}-${item.order}`}>{exercises.find((exercise) => exercise.id === item.exerciseId)?.name ?? item.exerciseId} — {item.sets} подхода</li>)}</ul>
+        <button type="button" onClick={() => setIsSelectingExercise(true)}>Добавить упражнение в шаблон</button>
+        <div className="template-exercise-list" aria-label="Упражнения шаблона">{form.exercises.map((item, index) => {
+          const exercise = exercises.find((candidate) => candidate.id === item.exerciseId);
+          const name = exercise?.name ?? item.exerciseId;
+          return <article className="template-exercise-card" key={`${item.exerciseId}-${item.order}`}>
+            <div><p className="eyebrow">Упражнение {index + 1}</p><h3>{name}</h3></div>
+            <label>Подходы для {name}<input aria-label={`Подходы для ${name}`} type="number" min="1" value={item.sets} onChange={(event) => updateExerciseTarget(index, 'sets', event.target.value)} /></label>
+            <label>Повторы для {name}<input aria-label={`Повторы для ${name}`} type="number" min="1" value={item.targetReps ?? ''} onChange={(event) => updateExerciseTarget(index, 'targetReps', event.target.value)} /></label>
+            <label>Вес для {name}<input aria-label={`Вес для ${name}`} type="number" min="0" step="0.5" value={item.targetWeight ?? ''} onChange={(event) => updateExerciseTarget(index, 'targetWeight', event.target.value)} /></label>
+            <button type="button" aria-label={`Удалить ${name} из шаблона`} onClick={() => removeExercise(index)}>Убрать</button>
+          </article>;
+        })}</div>
         {error && <p role="alert">{error}</p>}
         <button type="submit">{editingId ? 'Сохранить изменения шаблона' : 'Сохранить шаблон'}</button>
       </form>
