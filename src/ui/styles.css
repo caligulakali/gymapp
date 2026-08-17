@@ -10,7 +10,25 @@
 body { margin: 0; min-width: 320px; min-height: 100vh; }
 button { border: 0; border-radius: 0.75rem; padding: 0.9rem 1.2rem; color: #111827; background: #a7f3d0; font: inherit; font-weight: 700; cursor: pointer; }
 .app-shell { display: grid; min-height: 100vh; place-items: center; padding: 1.5rem; }
+.app-nav { position: fixed; top: 1rem; right: 1rem; left: 1rem; display: flex; justify-content: flex-end; gap: 0.5rem; }
+.app-nav button { padding: 0.65rem 0.9rem; color: #d1d5db; background: #374151; }
 .welcome-card { width: min(100%, 30rem); padding: 2.5rem; border: 1px solid #374151; border-radius: 1.5rem; background: #1f2937; box-shadow: 0 1.5rem 4rem #03071266; }
 .eyebrow { margin: 0 0 0.75rem; color: #a7f3d0; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
 h1 { margin: 0; font-size: clamp(2.5rem, 12vw, 4.5rem); line-height: 1; }
 .welcome-copy { margin: 1rem 0 2rem; color: #d1d5db; font-size: 1.15rem; }
+.exercise-page { width: min(100%, 44rem); margin: 0 auto; }
+.page-heading h2 { margin: 0; font-size: 2.2rem; }
+.page-heading p:last-child { color: #d1d5db; }
+.exercise-form { display: grid; gap: 1rem; margin: 2rem 0; padding: 1.25rem; border: 1px solid #374151; border-radius: 1rem; background: #1f2937; }
+.exercise-form label { display: grid; gap: 0.4rem; color: #d1d5db; font-size: 0.9rem; font-weight: 600; }
+.exercise-form input:not([type='checkbox']), .exercise-form select, .exercise-form textarea { width: 100%; border: 1px solid #4b5563; border-radius: 0.6rem; padding: 0.75rem; color: #f9fafb; background: #111827; font: inherit; }
+.exercise-form textarea { min-height: 5rem; resize: vertical; }
+.checkbox-label { display: flex !important; grid-template-columns: auto 1fr; align-items: center; }
+.checkbox-label input { width: 1.2rem; height: 1.2rem; }
+.exercise-form [role='alert'] { margin: 0; color: #fca5a5; }
+.exercise-list { display: grid; gap: 0.75rem; padding: 0; list-style: none; }
+.exercise-list li { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem; border: 1px solid #374151; border-radius: 0.85rem; background: #1f2937; }
+.exercise-list strong, .exercise-list small { display: block; }
+.exercise-list small { margin-top: 0.3rem; color: #9ca3af; }
+.item-actions { display: flex; gap: 0.5rem; }
+.item-actions button { padding: 0.6rem 0.75rem; color: #d1d5db; background: #374151; }
