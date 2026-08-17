@@ -94,6 +94,21 @@ export function TemplatePage({ templateRepository, exerciseRepository, createId 
     }
   }
 
+  async function duplicateTemplate(template: Template) {
+    const copy: Template = {
+      ...template,
+      id: createId(),
+      name: `${template.name} — копия`,
+      exercises: template.exercises.map((exercise) => ({ ...exercise }))
+    };
+    try {
+      await templateRepository.save(copy);
+      setTemplates((current) => [...current, copy]);
+    } catch {
+      setError('Не удалось дублировать шаблон');
+    }
+  }
+
   return (
     <section className="template-page" aria-labelledby="template-page-title">
       <div className="page-heading">
@@ -113,7 +128,7 @@ export function TemplatePage({ templateRepository, exerciseRepository, createId 
         {error && <p role="alert">{error}</p>}
         <button type="submit">{editingId ? 'Сохранить изменения шаблона' : 'Сохранить шаблон'}</button>
       </form>
-      <ul className="template-list" aria-label="Список шаблонов">{templates.map((template) => <li key={template.id}><div><strong>{template.name}</strong><small>{template.exercises.length} упр.</small></div><div className="item-actions"><button type="button" aria-label={`Редактировать шаблон ${template.name}`} onClick={() => startEditing(template)}>Изменить</button><button type="button" aria-label={`Удалить шаблон ${template.name}`} onClick={() => void handleDelete(template)}>Удалить</button></div></li>)}</ul>
+      <ul className="template-list" aria-label="Список шаблонов">{templates.map((template) => <li key={template.id}><div><strong>{template.name}</strong><small>{template.exercises.length} упр.</small></div><div className="item-actions"><button type="button" aria-label={`Редактировать шаблон ${template.name}`} onClick={() => startEditing(template)}>Изменить</button><button type="button" aria-label={`Дублировать шаблон ${template.name}`} onClick={() => void duplicateTemplate(template)}>Дублировать</button><button type="button" aria-label={`Удалить шаблон ${template.name}`} onClick={() => void handleDelete(template)}>Удалить</button></div></li>)}</ul>
     </section>
   );
 }
