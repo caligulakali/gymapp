@@ -45,7 +45,8 @@ function validateTemplateExercise(value: unknown): string[] {
 }
 
 export function validateTemplateDraft(draft: TemplateDraft): string[] {
-  const candidate = draft as unknown as { name: unknown; notes?: unknown; exercises: unknown };
+  if (!isRecord(draft)) return ['Шаблон указан неверно'];
+  const candidate = draft as { name: unknown; notes?: unknown; exercises: unknown };
   const errors: string[] = [];
   if (typeof candidate.name !== 'string' || !candidate.name.trim()) {
     errors.push('Название шаблона не может быть пустым');
