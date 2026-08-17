@@ -26,3 +26,25 @@ export interface Template {
   notes?: string;
   exercises: TemplateExercise[];
 }
+
+export interface WorkoutSet {
+  weight?: number;
+  reps?: number;
+  time?: number;
+  distance?: number;
+  rest?: number;
+}
+
+export interface WorkoutExercise {
+  exerciseId: string;
+  order: number;
+  sets: WorkoutSet[];
+}
+
+export interface Workout {
+  id: string;
+  templateId?: string;
+  date: string;
+  notes?: string;
+  exercises: WorkoutExercise[];
+}
