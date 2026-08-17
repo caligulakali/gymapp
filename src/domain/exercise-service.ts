@@ -19,35 +19,48 @@ function isValue<T extends string>(value: string, values: readonly T[]): value i
 }
 
 export function validateExerciseDraft(draft: ExerciseDraft): string[] {
+  const candidate = draft as unknown as {
+    name: unknown;
+    muscleGroup: unknown;
+    type: unknown;
+    unit: unknown;
+    notes?: unknown;
+  };
   const errors: string[] = [];
-  if (!draft.name.trim()) {
+  if (typeof candidate.name !== 'string' || !candidate.name.trim()) {
     errors.push('Название упражнения не может быть пустым');
   }
-  if (!isValue(draft.muscleGroup, MUSCLE_GROUPS)) {
+  if (typeof candidate.notes !== 'undefined' && typeof candidate.notes !== 'string') {
+    errors.push('Заметка упражнения указана неверно');
+  }
+  if (typeof candidate.muscleGroup !== 'string' || !isValue(candidate.muscleGroup, MUSCLE_GROUPS)) {
     errors.push('Мышечная группа указана неверно');
   }
-  if (!isValue(draft.type, EXERCISE_TYPES)) {
+  if (typeof candidate.type !== 'string' || !isValue(candidate.type, EXERCISE_TYPES)) {
     errors.push('Тип упражнения указан неверно');
   }
-  if (!isValue(draft.unit, WEIGHT_UNITS)) {
+  if (typeof candidate.unit !== 'string' || !isValue(candidate.unit, WEIGHT_UNITS)) {
     errors.push('Единица веса указана неверно');
   }
   return errors;
 }
 
 export function createExercise(draft: ExerciseDraft, id: string): Exercise {
+  if (typeof id !== 'string' || !id.trim()) {
+    throw new Error('Идентификатор упражнения не может быть пустым');
+  }
   const errors = validateExerciseDraft(draft);
   if (errors.length > 0) {
     throw new Error(errors[0]);
   }
 
   return {
-    id,
+    id: id.trim(),
     name: draft.name.trim(),
     muscleGroup: draft.muscleGroup,
     type: draft.type,
     unit: draft.unit,
-    notes: draft.notes?.trim() || undefined,
+    notes: typeof draft.notes === 'string' ? draft.notes.trim() || undefined : undefined,
     favourite: false
   };
 }
