@@ -81,12 +81,16 @@ export function ExercisePage({ repository, createId = makeId }: ExercisePageProp
   }
 
   async function handleDelete(exercise: Exercise) {
-    if (!window.confirm(`Удалить упражнение «${exercise.name}»? История тренировок сохранится.`)) return;
-    await repository.remove(exercise.id);
-    setExercises((current) => current.filter((item) => item.id !== exercise.id));
-    if (editingId === exercise.id) {
-      setForm(EMPTY_FORM);
-      setEditingId(undefined);
+    if (!window.confirm(`Удалить упражнение «${exercise.name}»? История тренировок сохранится, но упражнение будет убрано из шаблонов.`)) return;
+    try {
+      await repository.remove(exercise.id);
+      setExercises((current) => current.filter((item) => item.id !== exercise.id));
+      if (editingId === exercise.id) {
+        setForm(EMPTY_FORM);
+        setEditingId(undefined);
+      }
+    } catch {
+      setError('Не удалось удалить упражнение');
     }
   }
 
