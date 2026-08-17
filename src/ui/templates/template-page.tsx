@@ -157,7 +157,9 @@ export function TemplatePage({ templateRepository, exerciseRepository, createId 
             <label>Подходы для {name}<input aria-label={`Подходы для ${name}`} type="number" min="1" value={item.sets} onChange={(event) => updateExerciseTarget(index, 'sets', event.target.value)} /></label>
             <label>Повторы для {name}<input aria-label={`Повторы для ${name}`} type="number" min="1" value={item.targetReps ?? ''} onChange={(event) => updateExerciseTarget(index, 'targetReps', event.target.value)} /></label>
             <label>Вес для {name}<input aria-label={`Вес для ${name}`} type="number" min="0" step="0.5" value={item.targetWeight ?? ''} onChange={(event) => updateExerciseTarget(index, 'targetWeight', event.target.value)} /></label>
-            <button type="button" aria-label={`Удалить ${name} из шаблона`} onClick={() => removeExercise(index)}>Убрать</button>
+            <div className="template-card-actions">
+              <button type="button" aria-label={`Удалить ${name} из шаблона`} onClick={() => removeExercise(index)}>Убрать</button>
+            </div>
           </article>;
         })}</div>
         {error && <p role="alert">{error}</p>}
