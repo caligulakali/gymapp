@@ -93,6 +93,27 @@ describe('TemplatePage', () => {
     expect(repositories.templateRepository.save).not.toHaveBeenCalled();
   });
 
+  it('prevents adding the same exercise to a template twice', async () => {
+    const repositories = createRepositories();
+    render(<TemplatePage {...repositories} />);
+
+    fireEvent.change(await screen.findByLabelText('Название шаблона'), { target: { value: 'Без дублей' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Добавить упражнение в шаблон' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Выбрать Приседания' }));
+
+    await screen.findByRole('heading', { name: 'Шаблоны' });
+    fireEvent.click(screen.getByRole('button', { name: 'Добавить упражнение в шаблон' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Выбрать Приседания' }));
+
+    await screen.findByRole('heading', { name: 'Шаблоны' });
+    expect(screen.getAllByRole('heading', { name: 'Приседания' })).toHaveLength(1);
+    expect(screen.getByRole('alert')).toHaveTextContent('Это упражнение уже добавлено в шаблон');
+    fireEvent.click(screen.getByRole('button', { name: 'Сохранить шаблон' }));
+    await waitFor(() => expect(repositories.templateRepository.save).toHaveBeenCalledWith(expect.objectContaining({
+      exercises: [expect.objectContaining({ exerciseId: 'exercise-1' })]
+    })));
+  });
+
   it('edits an existing template', async () => {
     const repositories = createRepositories([template]);
     render(<TemplatePage {...repositories} />);
