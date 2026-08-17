@@ -27,7 +27,9 @@ function createRepositories(templates: Template[] = []) {
       remove: vi.fn().mockResolvedValue(undefined)
     },
     exerciseRepository: {
-      getAll: vi.fn().mockResolvedValue([exercise])
+      getAll: vi.fn().mockResolvedValue([exercise]),
+      save: vi.fn().mockResolvedValue(undefined),
+      remove: vi.fn().mockResolvedValue(undefined)
     }
   };
 }
@@ -35,22 +37,26 @@ function createRepositories(templates: Template[] = []) {
 afterEach(() => vi.restoreAllMocks());
 
 describe('TemplatePage', () => {
-  it('creates a template from an existing exercise', async () => {
+  it('opens exercise selection and adds the chosen exercise as an editable template card', async () => {
     const repositories = createRepositories();
     render(<TemplatePage {...repositories} />);
 
     fireEvent.change(await screen.findByLabelText('Название шаблона'), { target: { value: 'Сильные ноги' } });
-    const exerciseSelect = screen.getByLabelText('Упражнение');
-    expect(exerciseSelect).toHaveValue('exercise-1');
+    fireEvent.click(screen.getByRole('button', { name: 'Добавить упражнение в шаблон' }));
+
+    await screen.findByRole('heading', { name: 'Упражнения' });
+    fireEvent.click(await screen.findByRole('button', { name: 'Выбрать Приседания' }));
+
+    await screen.findByRole('heading', { name: 'Шаблоны' });
+    expect(screen.getByRole('heading', { name: 'Приседания' })).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Заметки шаблона'), { target: { value: 'Контроль техники' } });
-    fireEvent.change(screen.getByLabelText('Количество подходов'), { target: { value: '5' } });
-    fireEvent.change(screen.getByLabelText('Целевые повторения'), { target: { value: '6' } });
-    fireEvent.change(screen.getByLabelText('Целевой вес'), { target: { value: '110' } });
+    fireEvent.change(screen.getByLabelText('Подходы для Приседания'), { target: { value: '5' } });
+    fireEvent.change(screen.getByLabelText('Повторы для Приседания'), { target: { value: '6' } });
+    fireEvent.change(screen.getByLabelText('Вес для Приседания'), { target: { value: '110' } });
     expect(screen.getByLabelText('Заметки шаблона')).toHaveValue('Контроль техники');
-    expect(screen.getByLabelText('Количество подходов')).toHaveValue(5);
-    expect(screen.getByLabelText('Целевые повторения')).toHaveValue(6);
-    expect(screen.getByLabelText('Целевой вес')).toHaveValue(110);
-    fireEvent.click(screen.getByRole('button', { name: 'Добавить упражнение' }));
+    expect(screen.getByLabelText('Подходы для Приседания')).toHaveValue(5);
+    expect(screen.getByLabelText('Повторы для Приседания')).toHaveValue(6);
+    expect(screen.getByLabelText('Вес для Приседания')).toHaveValue(110);
     fireEvent.click(screen.getByRole('button', { name: 'Сохранить шаблон' }));
 
     await waitFor(() => expect(repositories.templateRepository.save).toHaveBeenCalledWith(expect.objectContaining({
@@ -58,6 +64,33 @@ describe('TemplatePage', () => {
       notes: 'Контроль техники',
       exercises: [{ exerciseId: 'exercise-1', order: 0, sets: 5, targetReps: 6, targetWeight: 110 }]
     })));
+  });
+
+  it('keeps the template draft when returning from exercise selection', async () => {
+    const repositories = createRepositories();
+    render(<TemplatePage {...repositories} />);
+
+    fireEvent.change(await screen.findByLabelText('Название шаблона'), { target: { value: 'Мой шаблон' } });
+    fireEvent.change(screen.getByLabelText('Заметки шаблона'), { target: { value: 'Не терять черновик' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Добавить упражнение в шаблон' }));
+    await screen.findByRole('heading', { name: 'Упражнения' });
+    fireEvent.click(await screen.findByRole('button', { name: 'Выбрать Приседания' }));
+
+    await screen.findByRole('heading', { name: 'Шаблоны' });
+    fireEvent.change(screen.getByLabelText('Подходы для Приседания'), { target: { value: '4' } });
+    fireEvent.change(screen.getByLabelText('Повторы для Приседания'), { target: { value: '10' } });
+    fireEvent.change(screen.getByLabelText('Вес для Приседания'), { target: { value: '80' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Добавить упражнение в шаблон' }));
+    await screen.findByRole('heading', { name: 'Упражнения' });
+    fireEvent.click(screen.getByRole('button', { name: 'Вернуться к шаблону' }));
+
+    await screen.findByRole('heading', { name: 'Шаблоны' });
+    expect(screen.getByLabelText('Название шаблона')).toHaveValue('Мой шаблон');
+    expect(screen.getByLabelText('Заметки шаблона')).toHaveValue('Не терять черновик');
+    expect(screen.getByLabelText('Подходы для Приседания')).toHaveValue(4);
+    expect(screen.getByLabelText('Повторы для Приседания')).toHaveValue(10);
+    expect(screen.getByLabelText('Вес для Приседания')).toHaveValue(80);
+    expect(repositories.templateRepository.save).not.toHaveBeenCalled();
   });
 
   it('edits an existing template', async () => {
