@@ -88,6 +88,9 @@ describe('TemplatePage', () => {
       id: 'template-copy',
       name: 'Ноги — копия'
     }));
+    const savedTemplate = repositories.templateRepository.save.mock.calls[0][0] as Template;
+    expect(savedTemplate.exercises).not.toBe(template.exercises);
+    expect(savedTemplate.exercises[0]).not.toBe(template.exercises[0]);
     expect(createId).toHaveBeenCalledOnce();
   });
 
