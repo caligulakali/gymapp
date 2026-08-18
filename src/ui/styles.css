@@ -48,6 +48,9 @@
 .data-transfer-card { margin-bottom: 14px; }
 .history-card-main { display: flex; flex: 1; align-items: center; gap: 13px; min-width: 0; padding: 0; color: #f2f4f5; background: transparent; text-align: left; }
 .history-card-main:hover { color: var(--green); }
+.history-filters { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin-bottom: 14px; }
+.history-filters label { display: grid; gap: 5px; color: #aeb7af; font-size: .72rem; font-weight: 600; }
+.history-filters select { min-width: 0; border: 1px solid #363d45; border-radius: 7px; padding: 9px; color: #f6f7f8; background: #101214; }
 .history-delete-button { flex: 0 0 30px; }
 .edit-workout-form { display: grid; gap: 14px; }
 .edit-workout-form > label { display: grid; gap: 6px; color: #b8bec5; font-size: .8rem; font-weight: 600; }
@@ -58,6 +61,7 @@
 .import-file-label input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 .error-message { color: #ff8f8f; text-align: center; }
 @media (max-width: 760px) { .mobile-nav nav { grid-template-columns: repeat(6, minmax(0, 1fr)); } .data-transfer-actions > * { flex: 1 1 100%; } }
+@media (max-width: 760px) { .history-filters { grid-template-columns: 1fr; } }
 
 .muscle-group-field { position: relative; }
 .muscle-picker { position: relative; display: block; }

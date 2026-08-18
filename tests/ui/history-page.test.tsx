@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { Workout } from '../../src/db/entities';
+import type { Exercise, Template, Workout } from '../../src/db/entities';
 import { HistoryPage } from '../../src/ui/history-page';
 
 const workout: Workout = {
@@ -9,6 +9,9 @@ const workout: Workout = {
   notes: 'Старая заметка',
   exercises: [{ exerciseId: 'squat', order: 0, sets: [{ weight: 100, reps: 8 }] }]
 };
+const oldWorkout: Workout = { ...workout, id: 'workout-old', date: '2026-07-01T10:00:00.000Z', templateId: 'legs' };
+const template: Template = { id: 'legs', name: 'Ноги', exercises: [{ exerciseId: 'squat', order: 0, sets: 3 }] };
+const exercise: Exercise = { id: 'squat', name: 'Приседания', muscleGroup: 'legs', type: 'strength', unit: 'kg', favourite: false };
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -41,5 +44,22 @@ describe('HistoryPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Удалить тренировку Свободная тренировка' }));
 
     await waitFor(() => expect(repo.remove).not.toHaveBeenCalled());
+  });
+
+  it('filters workouts by period, template, and exercise', () => {
+    const repo = repository();
+    render(<HistoryPage workouts={[workout, oldWorkout]} repository={repo} templates={[template]} exercises={[exercise]} now={() => '2026-08-18T12:00:00.000Z'} />);
+
+    expect(screen.getByRole('button', { name: 'Открыть тренировку Свободная тренировка' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Открыть тренировку Тренировка по шаблону' })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Период'), { target: { value: '7' } });
+
+    expect(screen.getByRole('button', { name: 'Открыть тренировку Свободная тренировка' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Открыть тренировку Тренировка по шаблону' })).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Период'), { target: { value: 'all' } });
+    fireEvent.change(screen.getByLabelText('Шаблон'), { target: { value: 'legs' } });
+
+    expect(screen.queryByRole('button', { name: 'Открыть тренировку Свободная тренировка' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Открыть тренировку Тренировка по шаблону' })).toBeInTheDocument();
   });
 });
