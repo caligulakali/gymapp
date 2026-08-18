@@ -1,16 +1,8 @@
-import type { Exercise, ExerciseType, MuscleGroup, WeightUnit } from '../db/entities';
+import type { Exercise, ExerciseType, WeightUnit } from '../db/entities';
+import { MUSCLE_GROUPS } from './muscle-groups';
 
 export type ExerciseDraft = Omit<Exercise, 'id' | 'favourite'>;
 
-const MUSCLE_GROUPS: readonly MuscleGroup[] = [
-  'chest',
-  'back',
-  'legs',
-  'shoulders',
-  'arms',
-  'abs',
-  'cardio'
-];
 const EXERCISE_TYPES: readonly ExerciseType[] = ['strength', 'cardio', 'time', 'reps'];
 const WEIGHT_UNITS: readonly WeightUnit[] = ['kg', 'lb'];
 

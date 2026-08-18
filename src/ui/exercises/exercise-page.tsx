@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { createExercise, type ExerciseDraft } from '../../domain/exercise-service';
+import { getMuscleGroupLabel, MUSCLE_CATEGORIES } from '../../domain/muscle-groups';
 import type { Exercise, ExerciseType, MuscleGroup, WeightUnit } from '../../db/entities';
 import type { ExerciseRepositoryPort } from '../../domain/exercise-repository-port';
 
@@ -21,10 +22,6 @@ const EMPTY_FORM: FormState = {
   favourite: false
 };
 
-const MUSCLE_GROUP_OPTIONS: readonly [MuscleGroup, string][] = [
-  ['chest', 'Грудь'], ['back', 'Спина'], ['legs', 'Ноги'], ['shoulders', 'Плечи'],
-  ['arms', 'Руки'], ['abs', 'Пресс'], ['cardio', 'Кардио']
-];
 const TYPE_OPTIONS: readonly [ExerciseType, string][] = [
   ['strength', 'Силовое'], ['cardio', 'Кардио'], ['time', 'На время'], ['reps', 'На количество']
 ];
@@ -106,7 +103,7 @@ export function ExercisePage({ repository, createId = makeId, onSelectExercise, 
       </div>
       <form className="exercise-form" onSubmit={handleSubmit}>
         <label>Название<input aria-label="Название" value={form.name} onChange={(event) => updateForm('name', event.target.value)} /></label>
-        <label>Мышечная группа<select aria-label="Мышечная группа" value={form.muscleGroup} onChange={(event) => updateForm('muscleGroup', event.target.value as MuscleGroup)}>{MUSCLE_GROUP_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+        <label>Мышечная группа<select aria-label="Мышечная группа" value={form.muscleGroup} onChange={(event) => updateForm('muscleGroup', event.target.value as MuscleGroup)}>{MUSCLE_CATEGORIES.map((category) => <optgroup key={category.value} label={category.label}>{category.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</optgroup>)}</select></label>
         <label>Тип<select aria-label="Тип" value={form.type} onChange={(event) => updateForm('type', event.target.value as ExerciseType)}>{TYPE_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
         <label>Единица веса<select aria-label="Единица веса" value={form.unit} onChange={(event) => updateForm('unit', event.target.value as WeightUnit)}><option value="kg">Килограммы (кг)</option><option value="lb">Фунты (lb)</option></select></label>
         <label>Заметки<textarea aria-label="Заметки" value={form.notes} onChange={(event) => updateForm('notes', event.target.value)} /></label>
@@ -116,7 +113,7 @@ export function ExercisePage({ repository, createId = makeId, onSelectExercise, 
       </form>
       <ul className="exercise-list" aria-label="Список упражнений">
         {exercises.map((exercise) => <li key={exercise.id}>
-          <div><strong>{exercise.favourite ? '★ ' : ''}{exercise.name}</strong>{exercise.notes && <small>{exercise.notes}</small>}</div>
+          <div><strong>{exercise.favourite ? '★ ' : ''}{exercise.name}</strong><small className="exercise-muscle">{getMuscleGroupLabel(exercise.muscleGroup)}</small>{exercise.notes && <small>{exercise.notes}</small>}</div>
           <div className="item-actions">{onSelectExercise && <button className="secondary-button" type="button" aria-label={`Выбрать ${exercise.name}`} onClick={() => onSelectExercise(exercise)}>Выбрать</button>}<button className="ghost-button" type="button" aria-label={`Редактировать ${exercise.name}`} onClick={() => startEditing(exercise)}>Изменить</button><button className="ghost-button danger-button" type="button" aria-label={`Удалить ${exercise.name}`} onClick={() => void handleDelete(exercise)}>Удалить</button></div>
         </li>)}
       </ul>

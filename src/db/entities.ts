@@ -1,4 +1,13 @@
-export type MuscleGroup = 'chest' | 'back' | 'legs' | 'shoulders' | 'arms' | 'abs' | 'cardio';
+export type MuscleCategory = 'chest' | 'back' | 'legs' | 'shoulders' | 'arms' | 'abs' | 'cardio';
+
+export type MuscleGroup =
+  | 'chest' | 'chest_upper' | 'chest_mid' | 'chest_lower'
+  | 'back' | 'back_lats' | 'back_upper' | 'back_lower' | 'back_traps'
+  | 'legs' | 'legs_quads' | 'legs_hamstrings' | 'legs_glutes' | 'legs_calves'
+  | 'shoulders' | 'shoulders_front' | 'shoulders_side' | 'shoulders_rear'
+  | 'arms' | 'arms_biceps' | 'arms_triceps' | 'arms_brachialis' | 'arms_forearms'
+  | 'abs' | 'abs_upper' | 'abs_lower' | 'abs_obliques'
+  | 'cardio';
 export type ExerciseType = 'strength' | 'cardio' | 'time' | 'reps';
 export type WeightUnit = 'kg' | 'lb';
 
