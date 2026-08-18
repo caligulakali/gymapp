@@ -4,7 +4,7 @@ import { MUSCLE_GROUPS } from './muscle-groups';
 export type ExerciseDraft = Omit<Exercise, 'id' | 'favourite'>;
 
 const EXERCISE_TYPES: readonly ExerciseType[] = ['strength', 'cardio', 'time', 'reps'];
-const WEIGHT_UNITS: readonly WeightUnit[] = ['kg', 'lb'];
+const WEIGHT_UNITS: readonly WeightUnit[] = ['kg'];
 
 function isValue<T extends string>(value: string, values: readonly T[]): value is T {
   return values.includes(value as T);

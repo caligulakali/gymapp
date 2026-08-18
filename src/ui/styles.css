@@ -67,7 +67,7 @@
 .muscle-picker-option { display: flex; align-items: center; justify-content: space-between; min-width: 0; padding: 9px 10px; border: 1px solid transparent; border-radius: 8px; color: #d9e0db; background: transparent; font-size: .74rem; text-align: left; transition: border-color .14s ease, background .14s ease, color .14s ease; }
 .muscle-picker-option:hover { border-color: #42543e; background: #253024; color: #f1f8ed; }
 .muscle-picker-option.is-selected { border-color: #5b7c43; color: var(--green); background: #273523; font-weight: 700; }
-@media (max-width: 760px) { .muscle-picker-menu { position: fixed; top: auto; right: 16px; bottom: 82px; left: 16px; max-height: min(440px, 62vh); } .muscle-picker-options { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 760px) { .muscle-picker-menu { max-height: min(440px, 62vh); } .muscle-picker-options { grid-template-columns: 1fr 1fr; } }
 
 .exercise-control-native-select { position: absolute; width: 1px !important; height: 1px; padding: 0 !important; opacity: 0; pointer-events: none; }
 .type-picker { display: block; padding: 10px; border: 1px solid #313b42; border-radius: 11px; background: #151a1d; }
@@ -82,7 +82,7 @@
 .type-picker-option.is-selected { border-color: #5b7c43; color: var(--green); background: #273523; font-weight: 700; }
 .type-option-dot { display: grid; flex: 0 0 16px; width: 16px; height: 16px; place-items: center; border: 1px solid #54625a; border-radius: 50%; font-size: .58rem; }
 .type-picker-option.is-selected .type-option-dot { border-color: var(--green); background: var(--green); color: #14200d; }
-.unit-picker { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; padding: 5px; border: 1px solid #313b42; border-radius: 11px; background: #151a1d; }
+.unit-picker { display: grid; grid-template-columns: minmax(0, 1fr); gap: 7px; padding: 5px; border: 1px solid #313b42; border-radius: 11px; background: #151a1d; }
 .unit-option { display: flex; align-items: center; gap: 8px; padding: 10px; border: 1px solid transparent; border-radius: 8px; color: #aeb8b3; background: transparent; text-align: left; transition: border-color .14s ease, background .14s ease, color .14s ease; }
 .unit-option strong { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 7px; color: #87938b; background: #252d31; font-size: .62rem; }
 .unit-option span { font-size: .71rem; }

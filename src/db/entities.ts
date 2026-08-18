@@ -9,7 +9,7 @@ export type MuscleGroup =
   | 'abs' | 'abs_upper' | 'abs_lower' | 'abs_obliques'
   | 'cardio';
 export type ExerciseType = 'strength' | 'cardio' | 'time' | 'reps';
-export type WeightUnit = 'kg' | 'lb';
+export type WeightUnit = 'kg';
 
 export interface Exercise {
   id: string;

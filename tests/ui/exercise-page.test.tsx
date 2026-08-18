@@ -33,7 +33,7 @@ describe('ExercisePage', () => {
     fireEvent.change(await screen.findByLabelText('Название'), { target: { value: 'Тяга верхнего блока' } });
     fireEvent.change(screen.getByLabelText('Мышечная группа'), { target: { value: 'back' } });
     fireEvent.change(screen.getByLabelText('Тип'), { target: { value: 'strength' } });
-    fireEvent.change(screen.getByLabelText('Единица веса'), { target: { value: 'lb' } });
+    fireEvent.change(screen.getByLabelText('Единица веса'), { target: { value: 'kg' } });
     fireEvent.change(screen.getByLabelText('Заметки'), { target: { value: 'Техника' } });
     fireEvent.click(screen.getByLabelText('Избранное'));
     fireEvent.click(screen.getByRole('button', { name: 'Сохранить упражнение' }));
@@ -42,7 +42,7 @@ describe('ExercisePage', () => {
       name: 'Тяга верхнего блока',
       muscleGroup: 'back',
       type: 'strength',
-      unit: 'lb',
+      unit: 'kg',
       notes: 'Техника',
       favourite: true
     })));
@@ -107,6 +107,7 @@ describe('ExercisePage', () => {
 
     const menu = document.querySelector('.muscle-picker-menu');
     expect(menu).toBeInTheDocument();
+    expect(menu?.parentElement).toHaveClass('muscle-picker');
     expect(menu?.querySelector('[aria-label="Руки"]')).toBeInTheDocument();
     fireEvent.click(within(menu as HTMLElement).getByRole('option', { name: 'Бицепс' }));
 
@@ -132,10 +133,10 @@ describe('ExercisePage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Выбрать тип упражнения' }));
     fireEvent.click(screen.getByRole('radio', { name: 'На время' }));
-    fireEvent.click(screen.getByRole('radio', { name: 'Выбрать фунты' }));
 
     expect(screen.getByLabelText('Тип')).toHaveValue('time');
-    expect(screen.getByLabelText('Единица веса')).toHaveValue('lb');
+    expect(screen.getByLabelText('Единица веса')).toHaveValue('kg');
+    expect(screen.queryByRole('radio', { name: 'Выбрать фунты' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Выбрать тип упражнения' })).toHaveTextContent('На время');
   });
 
