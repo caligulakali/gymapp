@@ -55,6 +55,9 @@
 .edit-workout-form { display: grid; gap: 14px; }
 .edit-workout-form > label { display: grid; gap: 6px; color: #b8bec5; font-size: .8rem; font-weight: 600; }
 .edit-workout-form > label input { border: 1px solid #363d45; border-radius: 7px; padding: 10px; color: #f6f7f8; background: #101214; }
+.exercise-delete-button { display: block; margin: -8px 0 12px; padding: 0; color: #ff9d9d; font-size: .72rem; }
+.edit-exercise-picker { display: flex; gap: 8px; }
+.edit-exercise-picker select { flex: 1; border: 1px solid #363d45; border-radius: 7px; padding: 10px; color: #f6f7f8; background: #101214; }
 .data-transfer-card h2 { margin-top: 0; }
 .data-transfer-actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 16px; }
 .import-file-label { display: inline-flex; margin-top: 16px; cursor: pointer; }

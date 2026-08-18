@@ -12,6 +12,7 @@ const workout: Workout = {
 const oldWorkout: Workout = { ...workout, id: 'workout-old', date: '2026-07-01T10:00:00.000Z', templateId: 'legs' };
 const template: Template = { id: 'legs', name: 'Ноги', exercises: [{ exerciseId: 'squat', order: 0, sets: 3 }] };
 const exercise: Exercise = { id: 'squat', name: 'Приседания', muscleGroup: 'legs', type: 'strength', unit: 'kg', favourite: false };
+const bench: Exercise = { id: 'bench', name: 'Жим лёжа', muscleGroup: 'chest', type: 'strength', unit: 'kg', favourite: false };
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -61,5 +62,17 @@ describe('HistoryPage', () => {
 
     expect(screen.queryByRole('button', { name: 'Открыть тренировку Свободная тренировка' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Открыть тренировку Тренировка по шаблону' })).toBeInTheDocument();
+  });
+
+  it('adds and removes exercises while editing a workout', () => {
+    const repo = repository();
+    render(<HistoryPage workouts={[workout]} repository={repo} exercises={[exercise, bench]} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Открыть тренировку Свободная тренировка' }));
+    fireEvent.change(screen.getByLabelText('Новое упражнение'), { target: { value: 'bench' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Добавить упражнение' }));
+    expect(screen.getByText('bench')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Удалить упражнение bench' }));
+    expect(screen.queryByText('bench')).not.toBeInTheDocument();
   });
 });
