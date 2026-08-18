@@ -1,0 +1,67 @@
+import { describe, expect, it } from 'vitest';
+import type { Exercise, Template, Workout } from '../../src/db/entities';
+import {
+  exportCsv,
+  exportJson,
+  exportGymApp,
+  importGymApp,
+  type ExportData
+} from '../../src/domain/data-transfer-service';
+
+const exercises: Exercise[] = [{
+  id: 'squat',
+  name: 'Присед, "классика"',
+  muscleGroup: 'legs',
+  type: 'strength',
+  unit: 'kg',
+  favourite: true
+}];
+
+const templates: Template[] = [{
+  id: 'legs-day',
+  name: 'Ноги',
+  exercises: [{ exerciseId: 'squat', order: 0, sets: 3, targetReps: 8, targetWeight: 100 }]
+}];
+
+const workouts: Workout[] = [{
+  id: 'workout-1',
+  templateId: 'legs-day',
+  date: '2026-08-18T10:00:00.000Z',
+  notes: 'Хорошая техника',
+  exercises: [{
+    exerciseId: 'squat',
+    order: 0,
+    sets: [{ weight: 100, reps: 8, rest: 90 }]
+  }]
+}];
+
+const data: ExportData = { exercises, templates, workouts };
+
+describe('data transfer service', () => {
+  it('round-trips a gymapp export without changing data', () => {
+    const exported = exportGymApp(data, '2026-08-18T12:00:00.000Z');
+
+    expect(importGymApp(exported)).toEqual(data);
+  });
+
+  it('exports a complete JSON copy without mutating input', () => {
+    const snapshot = structuredClone(data);
+
+    expect(JSON.parse(exportJson(data))).toEqual(data);
+    expect(data).toEqual(snapshot);
+  });
+
+  it('exports workout sets as escaped CSV rows', () => {
+    const csv = exportCsv(data);
+
+    expect(csv).toContain('workoutId,date,templateId,exerciseId,order,set,weight,reps,time,distance,rest,notes');
+    expect(csv).toContain('"Присед, ""классика"""');
+    expect(csv).toContain('workout-1,2026-08-18T10:00:00.000Z,legs-day,squat,0,1,100,8,,,90,Хорошая техника');
+  });
+
+  it('rejects malformed, unsupported, and duplicate data', () => {
+    expect(() => importGymApp('{"format":"other","version":1}')).toThrow('формат');
+    expect(() => importGymApp(JSON.stringify({ format: 'gymapp', version: 2, exercises: [], templates: [], workouts: [] }))).toThrow('версия');
+    expect(() => importGymApp(JSON.stringify({ format: 'gymapp', version: 1, exportedAt: '2026-08-18T12:00:00.000Z', exercises: [{ ...exercises[0], id: 'squat' }, exercises[0]], templates: [], workouts: [] }))).toThrow('дубликат');
+  });
+});
