@@ -94,11 +94,11 @@ export function ExercisePage({ repository, createId = makeId, onSelectExercise, 
   }
 
   return (
-    <section className="exercise-page" aria-labelledby="exercise-page-title">
+    <section className={`exercise-page${onSelectExercise ? ' exercise-picker-page' : ''}`} aria-labelledby="exercise-page-title">
       <div className="page-heading">
-        <p className="eyebrow">Справочник</p>
+        <p className="eyebrow">{onSelectExercise ? 'Выбор упражнения' : 'Справочник'}</p>
         <h2 id="exercise-page-title">Упражнения</h2>
-        <p>Создайте свой список упражнений для быстрых тренировок.</p>
+        <p>{onSelectExercise ? 'Выберите упражнение — его можно будет настроить в шаблоне.' : 'Создайте свой список упражнений для быстрых тренировок.'}</p>
         {onBack && <button className="ghost-button back-button" type="button" onClick={onBack}><span aria-hidden="true">←</span> Вернуться к шаблону</button>}
       </div>
       <form className="exercise-form" onSubmit={handleSubmit}>
@@ -111,10 +111,10 @@ export function ExercisePage({ repository, createId = makeId, onSelectExercise, 
         {error && <p role="alert">{error}</p>}
         <button className="primary-submit save-exercise-button" type="submit"><span aria-hidden="true">✓</span> {editingId ? 'Сохранить изменения' : 'Сохранить упражнение'}</button>
       </form>
-      <ul className="exercise-list" aria-label="Список упражнений">
+      <ul className={`exercise-list${onSelectExercise ? ' exercise-choice-list' : ''}`} aria-label="Список упражнений">
         {exercises.map((exercise) => <li key={exercise.id}>
-          <div><strong>{exercise.favourite ? '★ ' : ''}{exercise.name}</strong><small className="exercise-muscle">{getMuscleGroupLabel(exercise.muscleGroup)}</small>{exercise.notes && <small>{exercise.notes}</small>}</div>
-          <div className="item-actions">{onSelectExercise && <button className="secondary-button" type="button" aria-label={`Выбрать ${exercise.name}`} onClick={() => onSelectExercise(exercise)}>Выбрать</button>}<button className="ghost-button" type="button" aria-label={`Редактировать ${exercise.name}`} onClick={() => startEditing(exercise)}>Изменить</button><button className="ghost-button danger-button" type="button" aria-label={`Удалить ${exercise.name}`} onClick={() => void handleDelete(exercise)}>Удалить</button></div>
+          <div className="exercise-list-content"><strong>{exercise.favourite ? '★ ' : ''}{exercise.name}</strong><small className="exercise-muscle">{getMuscleGroupLabel(exercise.muscleGroup)}</small>{exercise.notes && <small>{exercise.notes}</small>}</div>
+          <div className="item-actions">{onSelectExercise && <button className="secondary-button choose-exercise-button" type="button" aria-label={`Выбрать ${exercise.name}`} onClick={() => onSelectExercise(exercise)}><span aria-hidden="true">＋</span> Выбрать</button>}<button className="ghost-button" type="button" aria-label={`Редактировать ${exercise.name}`} onClick={() => startEditing(exercise)}>Изменить</button><button className="ghost-button danger-button" type="button" aria-label={`Удалить ${exercise.name}`} onClick={() => void handleDelete(exercise)}>Удалить</button></div>
         </li>)}
       </ul>
     </section>
