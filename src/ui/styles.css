@@ -43,3 +43,5 @@
 .exercise-choice small { margin-top: 3px; color: #9aa995; font-size: .66rem; }
 .exercise-selector .empty-picker { padding: 12px; }
 @media (max-width: 760px) { .template-picker, .exercise-choice-list, .exercise-choice-grid { grid-template-columns: 1fr; } .template-picker .picker-card { min-height: 78px; } .exercise-choice-list li { min-height: 118px; } .exercise-selector { padding: 16px; } }
+
+@media (max-width: 760px) { .mobile-nav { display: block; padding: 7px 4px max(7px, env(safe-area-inset-bottom)); } .mobile-nav nav { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); } .mobile-nav button { min-width: 0; padding: 3px 1px; } }

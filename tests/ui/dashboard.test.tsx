@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { App } from '../../src/ui/app';
 
@@ -21,7 +21,7 @@ describe('dashboard shell', () => {
   it('switches to progress without losing the app shell', () => {
     render(<App {...repositories} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Прогресс' }));
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Основная навигация' })).getByRole('button', { name: 'Прогресс' }));
 
     expect(screen.getByRole('heading', { name: 'Прогресс' })).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: 'Основная навигация' })).toBeInTheDocument();

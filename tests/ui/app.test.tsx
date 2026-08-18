@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { App } from '../../src/ui/app';
 
@@ -18,7 +18,7 @@ describe('App', () => {
     };
     render(<App exerciseRepository={repository} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Упражнения' }));
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Основная навигация' })).getByRole('button', { name: 'Упражнения' }));
 
     expect(screen.getByRole('heading', { name: 'Упражнения' })).toBeInTheDocument();
   });
@@ -38,8 +38,19 @@ describe('App', () => {
     };
     render(<App {...repositories} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Шаблоны' }));
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Основная навигация' })).getByRole('button', { name: 'Шаблоны' }));
 
     expect(screen.getByRole('heading', { name: 'Шаблоны' })).toBeInTheDocument();
+  });
+
+  it('keeps every primary section in the mobile navigation', () => {
+    render(<App />);
+
+    const mobileNavigation = screen.getByRole('navigation', { name: 'Мобильная навигация' });
+    expect(within(mobileNavigation).getByRole('button', { name: 'Обзор' })).toBeInTheDocument();
+    expect(within(mobileNavigation).getByRole('button', { name: 'История' })).toBeInTheDocument();
+    expect(within(mobileNavigation).getByRole('button', { name: 'Прогресс' })).toBeInTheDocument();
+    expect(within(mobileNavigation).getByRole('button', { name: 'Упражнения' })).toBeInTheDocument();
+    expect(within(mobileNavigation).getByRole('button', { name: 'Шаблоны' })).toBeInTheDocument();
   });
 });
