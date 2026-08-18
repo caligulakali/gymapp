@@ -37,6 +37,22 @@ describe('exercise service', () => {
     );
   });
 
+  it('accepts detailed muscle subgroups', () => {
+    expect(validateExerciseDraft({ ...draft, muscleGroup: 'arms_biceps' })).toEqual([]);
+    expect(createExercise({ ...draft, muscleGroup: 'arms_biceps' }, 'exercise-1').muscleGroup)
+      .toBe('arms_biceps');
+  });
+
+  it('accepts legacy broad muscle groups', () => {
+    expect(validateExerciseDraft({ ...draft, muscleGroup: 'arms' })).toEqual([]);
+  });
+
+  it('rejects unknown muscle subgroups', () => {
+    expect(validateExerciseDraft({ ...draft, muscleGroup: 'arms_bicepsx' as never })).toContain(
+      'Мышечная группа указана неверно'
+    );
+  });
+
   it('normalizes user text and creates a stable exercise entity', () => {
     const first = createExercise(draft, 'exercise-1');
     const second = createExercise(draft, 'exercise-1');

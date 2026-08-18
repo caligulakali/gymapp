@@ -1,4 +1,4 @@
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Exercise } from '../../src/db/entities';
 import { ExercisePage } from '../../src/ui/exercises/exercise-page';
@@ -87,6 +87,45 @@ describe('ExercisePage', () => {
 
     expect(repository.remove).not.toHaveBeenCalled();
     expect(screen.getByText('Жим лёжа')).toBeInTheDocument();
+  });
+
+  it('shows detailed muscle groups grouped by category', async () => {
+    render(<ExercisePage repository={createRepository()} />);
+
+    const select = await screen.findByLabelText('Мышечная группа');
+    const armsGroup = select.querySelector('optgroup[label="Руки"]');
+    expect(armsGroup).toBeInTheDocument();
+    expect(armsGroup).toHaveTextContent('Бицепс');
+    expect(armsGroup).toHaveTextContent('Трицепс');
+    expect(armsGroup).toHaveTextContent('Брахиалис');
+  });
+
+  it('saves a detailed muscle group', async () => {
+    const repository = createRepository();
+    render(<ExercisePage repository={repository} />);
+
+    fireEvent.change(await screen.findByLabelText('Название'), { target: { value: 'Подъём штанги' } });
+    fireEvent.change(screen.getByLabelText('Мышечная группа'), { target: { value: 'arms_biceps' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Сохранить упражнение' }));
+
+    await waitFor(() => expect(repository.save).toHaveBeenCalledWith(expect.objectContaining({
+      muscleGroup: 'arms_biceps'
+    })));
+  });
+
+  it('shows the muscle group label next to the exercise', async () => {
+    const detailedExercise: Exercise = { ...exercise, muscleGroup: 'arms_biceps' };
+    render(<ExercisePage repository={createRepository([detailedExercise])} />);
+
+    expect(await within(screen.getByLabelText('Список упражнений')).findByText('Бицепс')).toBeInTheDocument();
+  });
+
+  it('keeps a legacy muscle group when editing an exercise', async () => {
+    const legacyExercise: Exercise = { ...exercise, muscleGroup: 'arms' };
+    render(<ExercisePage repository={createRepository([legacyExercise])} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Редактировать Жим лёжа' }));
+    expect(screen.getByLabelText('Мышечная группа')).toHaveValue('arms');
   });
 
   it('shows an error and keeps the exercise when deletion fails', async () => {
