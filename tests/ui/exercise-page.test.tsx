@@ -127,6 +127,18 @@ describe('ExercisePage', () => {
     })));
   });
 
+  it('uses visual controls for exercise type and weight unit', async () => {
+    render(<ExercisePage repository={createRepository()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Выбрать тип упражнения' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'На время' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Выбрать фунты' }));
+
+    expect(screen.getByLabelText('Тип')).toHaveValue('time');
+    expect(screen.getByLabelText('Единица веса')).toHaveValue('lb');
+    expect(screen.getByRole('button', { name: 'Выбрать тип упражнения' })).toHaveTextContent('На время');
+  });
+
   it('shows the muscle group label next to the exercise', async () => {
     const detailedExercise: Exercise = { ...exercise, muscleGroup: 'arms_biceps' };
     render(<ExercisePage repository={createRepository([detailedExercise])} />);

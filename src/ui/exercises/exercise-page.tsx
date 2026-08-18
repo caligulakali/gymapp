@@ -56,6 +56,14 @@ export function ExercisePage({ repository, createId = makeId, onSelectExercise, 
     setIsMusclePickerOpen(false);
   }
 
+  function selectExerciseType(value: ExerciseType) {
+    updateForm('type', value);
+  }
+
+  function selectWeightUnit(value: WeightUnit) {
+    updateForm('unit', value);
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(undefined);
@@ -116,10 +124,16 @@ export function ExercisePage({ repository, createId = makeId, onSelectExercise, 
             {isMusclePickerOpen && <div className="muscle-picker-menu" role="listbox" aria-label="Группы мышц">{MUSCLE_CATEGORIES.map((category) => <div className="muscle-picker-category" key={category.value} role="group" aria-label={category.label}><div className="muscle-picker-category-heading"><span>{category.label}</span><small>{category.options.length} зоны</small></div><div className="muscle-picker-options">{category.options.map((option) => <button className={option.value === form.muscleGroup ? 'muscle-picker-option is-selected' : 'muscle-picker-option'} type="button" role="option" aria-selected={option.value === form.muscleGroup} key={option.value} onClick={() => selectMuscleGroup(option.value)}><span>{option.label}</span>{option.value === form.muscleGroup && <span aria-hidden="true">✓</span>}</button>)}</div></div>)}</div>}
           </span>
         </label>
-        <label>Тип<select aria-label="Тип" value={form.type} onChange={(event) => updateForm('type', event.target.value as ExerciseType)}>{TYPE_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-        <label>Единица веса<select aria-label="Единица веса" value={form.unit} onChange={(event) => updateForm('unit', event.target.value as WeightUnit)}><option value="kg">Килограммы (кг)</option><option value="lb">Фунты (lb)</option></select></label>
-        <label>Заметки<textarea aria-label="Заметки" value={form.notes} onChange={(event) => updateForm('notes', event.target.value)} /></label>
-        <label className="checkbox-label"><input type="checkbox" aria-label="Избранное" checked={form.favourite} onChange={(event) => updateForm('favourite', event.target.checked)} /> Избранное</label>
+        <label className="type-field">Тип
+          <select className="exercise-control-native-select" aria-label="Тип" value={form.type} onChange={(event) => updateForm('type', event.target.value as ExerciseType)} tabIndex={-1}>{TYPE_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
+          <span className="type-picker" role="radiogroup" aria-label="Тип упражнения"><button className="type-picker-trigger" type="button" aria-label="Выбрать тип упражнения"><span className="control-icon" aria-hidden="true">◌</span><span><strong>{TYPE_OPTIONS.find(([value]) => value === form.type)?.[1]}</strong><small>Как фиксировать результат</small></span></button><span className="type-picker-options">{TYPE_OPTIONS.map(([value, label]) => <button className={value === form.type ? 'type-picker-option is-selected' : 'type-picker-option'} type="button" role="radio" aria-checked={value === form.type} aria-label={label} key={value} onClick={() => selectExerciseType(value)}><span className="type-option-dot" aria-hidden="true">{value === form.type ? '✓' : ''}</span><span>{label}</span></button>)}</span></span>
+        </label>
+        <label className="unit-field">Единица веса
+          <select className="exercise-control-native-select" aria-label="Единица веса" value={form.unit} onChange={(event) => updateForm('unit', event.target.value as WeightUnit)} tabIndex={-1}><option value="kg">Килограммы (кг)</option><option value="lb">Фунты (lb)</option></select>
+          <span className="unit-picker" role="radiogroup" aria-label="Единицы веса"><button className={form.unit === 'kg' ? 'unit-option is-selected' : 'unit-option'} type="button" role="radio" aria-checked={form.unit === 'kg'} aria-label="Выбрать килограммы" onClick={() => selectWeightUnit('kg')}><strong>KG</strong><span>Килограммы (кг)</span></button><button className={form.unit === 'lb' ? 'unit-option is-selected' : 'unit-option'} type="button" role="radio" aria-checked={form.unit === 'lb'} aria-label="Выбрать фунты" onClick={() => selectWeightUnit('lb')}><strong>LB</strong><span>Фунты (lb)</span></button></span>
+        </label>
+        <label className="notes-field exercise-notes-field"><span className="notes-heading"><span><strong>Заметки</strong><small>Подсказки по технике или ощущениям</small></span><span>{form.notes?.length ?? 0}/240</span></span><textarea aria-label="Заметки" maxLength={240} value={form.notes ?? ''} onChange={(event) => updateForm('notes', event.target.value)} /></label>
+        <label className={`favourite-toggle${form.favourite ? ' is-selected' : ''}`}><input className="favourite-input" type="checkbox" aria-label="Избранное" checked={form.favourite} onChange={(event) => updateForm('favourite', event.target.checked)} /><span className="favourite-star" aria-hidden="true">★</span><span><strong>Избранное</strong><small>Показывать выше в списках выбора</small></span><span className="favourite-check" aria-hidden="true">{form.favourite ? '✓' : ''}</span></label>
         {error && <p role="alert">{error}</p>}
         <button className="primary-submit save-exercise-button" type="submit"><span aria-hidden="true">✓</span> {editingId ? 'Сохранить изменения' : 'Сохранить упражнение'}</button>
       </form>
