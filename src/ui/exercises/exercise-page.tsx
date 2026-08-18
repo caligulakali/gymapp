@@ -35,6 +35,7 @@ export function ExercisePage({ repository, createId = makeId, onSelectExercise, 
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [editingId, setEditingId] = useState<string | undefined>();
   const [error, setError] = useState<string | undefined>();
+  const [isMusclePickerOpen, setIsMusclePickerOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -48,6 +49,11 @@ export function ExercisePage({ repository, createId = makeId, onSelectExercise, 
 
   function updateForm<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function selectMuscleGroup(value: MuscleGroup) {
+    updateForm('muscleGroup', value);
+    setIsMusclePickerOpen(false);
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -103,7 +109,13 @@ export function ExercisePage({ repository, createId = makeId, onSelectExercise, 
       </div>
       <form className="exercise-form" onSubmit={handleSubmit}>
         <label>Название<input aria-label="Название" value={form.name} onChange={(event) => updateForm('name', event.target.value)} /></label>
-        <label>Мышечная группа<select aria-label="Мышечная группа" value={form.muscleGroup} onChange={(event) => updateForm('muscleGroup', event.target.value as MuscleGroup)}>{MUSCLE_CATEGORIES.map((category) => <optgroup key={category.value} label={category.label}>{category.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</optgroup>)}</select></label>
+        <label className="muscle-group-field">Мышечная группа
+          <span className="muscle-picker">
+            <select className="muscle-group-native-select" aria-label="Мышечная группа" value={form.muscleGroup} onChange={(event) => updateForm('muscleGroup', event.target.value as MuscleGroup)} tabIndex={-1}>{MUSCLE_CATEGORIES.map((category) => <optgroup key={category.value} label={category.label}>{category.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</optgroup>)}</select>
+            <button className={`muscle-picker-trigger${isMusclePickerOpen ? ' is-open' : ''}`} type="button" aria-label="Выбрать мышечную группу" aria-haspopup="listbox" aria-expanded={isMusclePickerOpen} onClick={() => setIsMusclePickerOpen((current) => !current)}><span className="muscle-picker-icon" aria-hidden="true">◈</span><span><strong>{getMuscleGroupLabel(form.muscleGroup)}</strong><small>Выберите зону нагрузки</small></span><span className="muscle-picker-chevron" aria-hidden="true">⌄</span></button>
+            {isMusclePickerOpen && <div className="muscle-picker-menu" role="listbox" aria-label="Группы мышц">{MUSCLE_CATEGORIES.map((category) => <div className="muscle-picker-category" key={category.value} role="group" aria-label={category.label}><div className="muscle-picker-category-heading"><span>{category.label}</span><small>{category.options.length} зоны</small></div><div className="muscle-picker-options">{category.options.map((option) => <button className={option.value === form.muscleGroup ? 'muscle-picker-option is-selected' : 'muscle-picker-option'} type="button" role="option" aria-selected={option.value === form.muscleGroup} key={option.value} onClick={() => selectMuscleGroup(option.value)}><span>{option.label}</span>{option.value === form.muscleGroup && <span aria-hidden="true">✓</span>}</button>)}</div></div>)}</div>}
+          </span>
+        </label>
         <label>Тип<select aria-label="Тип" value={form.type} onChange={(event) => updateForm('type', event.target.value as ExerciseType)}>{TYPE_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
         <label>Единица веса<select aria-label="Единица веса" value={form.unit} onChange={(event) => updateForm('unit', event.target.value as WeightUnit)}><option value="kg">Килограммы (кг)</option><option value="lb">Фунты (lb)</option></select></label>
         <label>Заметки<textarea aria-label="Заметки" value={form.notes} onChange={(event) => updateForm('notes', event.target.value)} /></label>

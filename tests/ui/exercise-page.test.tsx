@@ -100,6 +100,20 @@ describe('ExercisePage', () => {
     expect(armsGroup).toHaveTextContent('Брахиалис');
   });
 
+  it('opens a visual muscle group catalog and selects a subgroup', async () => {
+    render(<ExercisePage repository={createRepository()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Выбрать мышечную группу' }));
+
+    const menu = document.querySelector('.muscle-picker-menu');
+    expect(menu).toBeInTheDocument();
+    expect(menu?.querySelector('[aria-label="Руки"]')).toBeInTheDocument();
+    fireEvent.click(within(menu as HTMLElement).getByRole('option', { name: 'Бицепс' }));
+
+    expect(screen.getByRole('button', { name: 'Выбрать мышечную группу' })).toHaveTextContent('Бицепс');
+    expect(screen.getByLabelText('Мышечная группа')).toHaveValue('arms_biceps');
+  });
+
   it('saves a detailed muscle group', async () => {
     const repository = createRepository();
     render(<ExercisePage repository={repository} />);
