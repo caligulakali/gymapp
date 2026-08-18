@@ -120,6 +120,13 @@ describe('ExercisePage', () => {
     expect(await within(screen.getByLabelText('Список упражнений')).findByText('Бицепс')).toBeInTheDocument();
   });
 
+  it('keeps rendering when a stored exercise has an unknown muscle group', async () => {
+    const invalidExercise = { ...exercise, muscleGroup: 'unknown' as never };
+    render(<ExercisePage repository={createRepository([invalidExercise])} />);
+
+    expect(await within(screen.getByLabelText('Список упражнений')).findByText('Неизвестная группа')).toBeInTheDocument();
+  });
+
   it('keeps a legacy muscle group when editing an exercise', async () => {
     const legacyExercise: Exercise = { ...exercise, muscleGroup: 'arms' };
     render(<ExercisePage repository={createRepository([legacyExercise])} />);

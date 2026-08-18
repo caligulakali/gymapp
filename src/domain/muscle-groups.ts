@@ -92,8 +92,5 @@ export function getMuscleGroupLabel(group: MuscleGroup): string {
   const option = MUSCLE_CATEGORIES
     .flatMap((category) => category.options)
     .find((candidate) => candidate.value === group);
-  if (!option) {
-    throw new Error(`Unknown muscle group: ${group}`);
-  }
-  return option.label;
+  return option?.label ?? 'Неизвестная группа';
 }
