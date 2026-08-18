@@ -26,12 +26,24 @@ describe('WorkoutPage draft', () => {
     const repos = repositories();
     const draft = { id: 'draft-1', date: '2026-08-18T10:00:00.000Z', notes: 'Черновик', exercises: [{ exerciseId: 'squat', order: 0, sets: [{ reps: 8 }] }] };
     repos.draftRepository.getDraft.mockResolvedValue(draft);
-    render(<WorkoutPage {...repos} createId={() => 'new-id'} now={() => '2026-08-18T10:00:00.000Z'} />);
+    render(<WorkoutPage {...repos} createId={() => 'new-id'} now={() => '2026-08-18T10:00:00.000Z'} confirmDiscard={() => true} />);
 
     expect(await screen.findByRole('heading', { name: 'Тренировка: Свободная' })).toBeInTheDocument();
     expect(screen.getByLabelText('Повторы подхода 1 для Приседания')).toHaveValue(8);
     fireEvent.click(screen.getByRole('button', { name: 'Завершить и сохранить тренировку' }));
 
     await waitFor(() => expect(repos.draftRepository.clearDraft).toHaveBeenCalled());
+  });
+
+  it('allows discarding a draft after confirmation', async () => {
+    const repos = repositories();
+    repos.draftRepository.getDraft.mockResolvedValue({ id: 'draft-1', date: '2026-08-18T10:00:00.000Z', exercises: [] });
+    render(<WorkoutPage {...repos} createId={() => 'new-id'} now={() => '2026-08-18T10:00:00.000Z'} confirmDiscard={() => true} />);
+
+    await screen.findByRole('heading', { name: 'Тренировка: Свободная' });
+    fireEvent.click(screen.getByRole('button', { name: 'Отменить черновик' }));
+
+    await waitFor(() => expect(repos.draftRepository.clearDraft).toHaveBeenCalled());
+    expect(screen.getByRole('heading', { name: 'Начать тренировку' })).toBeInTheDocument();
   });
 });

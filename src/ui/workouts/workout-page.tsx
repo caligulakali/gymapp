@@ -14,11 +14,12 @@ type Props = {
   now: () => string;
   onSaved?: () => void;
   draftRepository?: WorkoutDraftRepositoryPort;
+  confirmDiscard?: () => boolean;
 };
 
 const emptySet = (): WorkoutSet => ({});
 
-export function WorkoutPage({ workoutRepository, templateRepository, exerciseRepository, createId, now, onSaved, draftRepository }: Props) {
+export function WorkoutPage({ workoutRepository, templateRepository, exerciseRepository, createId, now, onSaved, draftRepository, confirmDiscard = () => window.confirm('Удалить текущий черновик?') }: Props) {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [active, setActive] = useState<Workout>();
@@ -88,6 +89,14 @@ export function WorkoutPage({ workoutRepository, templateRepository, exerciseRep
     onSaved?.();
   }
 
+  async function discardDraft(): Promise<void> {
+    if (!confirmDiscard()) return;
+    await draftRepository?.clearDraft();
+    setActive(undefined);
+    setNotes('');
+    setSaved(false);
+  }
+
   if (!draftLoaded) {
     return <section className="content-page"><p className="muted">Восстанавливаем черновик…</p></section>;
   }
@@ -111,7 +120,7 @@ export function WorkoutPage({ workoutRepository, templateRepository, exerciseRep
 
   return (
     <section className="content-page workout-page" aria-labelledby="active-workout-title">
-      <header className="page-header"><div><p className="eyebrow">В процессе</p><h1 id="active-workout-title">Тренировка: {activeTemplate?.name ?? 'Свободная'}</h1><p className="muted">{active.exercises.length} упражнений · {active.exercises.reduce((sum, item) => sum + item.sets.length, 0)} подходов</p></div><span className="timer-pill">● 00:00</span></header>
+      <header className="page-header"><div><p className="eyebrow">В процессе</p><h1 id="active-workout-title">Тренировка: {activeTemplate?.name ?? 'Свободная'}</h1><p className="muted">{active.exercises.length} упражнений · {active.exercises.reduce((sum, item) => sum + item.sets.length, 0)} подходов</p></div><div className="workout-header-actions"><span className="timer-pill">● 00:00</span><button className="secondary-button" type="button" onClick={() => void discardDraft()}>Отменить черновик</button></div></header>
       <form onSubmit={(event) => void save(event)}>
         <div className="workout-exercises">{active.exercises.map((item, exerciseIndex) => {
           const exercise = exercises.find((candidate) => candidate.id === item.exerciseId);
