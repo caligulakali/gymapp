@@ -4,6 +4,7 @@ import { getMuscleGroupLabel } from '../../domain/muscle-groups';
 import type { ExerciseRepositoryPort } from '../../domain/exercise-repository-port';
 import type { TemplateRepositoryPort } from '../../domain/template-repository-port';
 import type { WorkoutRepositoryPort } from '../../domain/workout-repository-port';
+import type { WorkoutDraftRepositoryPort } from '../../domain/workout-draft-repository-port';
 
 type Props = {
   workoutRepository: WorkoutRepositoryPort;
@@ -12,16 +13,18 @@ type Props = {
   createId: () => string;
   now: () => string;
   onSaved?: () => void;
+  draftRepository?: WorkoutDraftRepositoryPort;
 };
 
 const emptySet = (): WorkoutSet => ({});
 
-export function WorkoutPage({ workoutRepository, templateRepository, exerciseRepository, createId, now, onSaved }: Props) {
+export function WorkoutPage({ workoutRepository, templateRepository, exerciseRepository, createId, now, onSaved, draftRepository }: Props) {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [active, setActive] = useState<Workout>();
   const [notes, setNotes] = useState('');
   const [saved, setSaved] = useState(false);
+  const [draftLoaded, setDraftLoaded] = useState(!draftRepository);
 
   useEffect(() => {
     void Promise.all([templateRepository.getAll(), exerciseRepository.getAll()]).then(([nextTemplates, nextExercises]) => {
@@ -29,6 +32,22 @@ export function WorkoutPage({ workoutRepository, templateRepository, exerciseRep
       setExercises(nextExercises);
     });
   }, [templateRepository, exerciseRepository]);
+
+  useEffect(() => {
+    if (!draftRepository) return;
+    void draftRepository.getDraft().then((draft) => {
+      if (draft) {
+        setActive(draft);
+        setNotes(draft.notes ?? '');
+      }
+      setDraftLoaded(true);
+    }).catch(() => setDraftLoaded(true));
+  }, [draftRepository]);
+
+  useEffect(() => {
+    if (!draftRepository || !draftLoaded || !active) return;
+    void draftRepository.saveDraft({ ...active, notes: notes || undefined });
+  }, [active, notes, draftLoaded, draftRepository]);
 
   function start(template?: Template) {
     setActive({
@@ -64,8 +83,13 @@ export function WorkoutPage({ workoutRepository, templateRepository, exerciseRep
     event.preventDefault();
     if (!active) return;
     await workoutRepository.save({ ...active, notes: notes || undefined });
+    await draftRepository?.clearDraft();
     setSaved(true);
     onSaved?.();
+  }
+
+  if (!draftLoaded) {
+    return <section className="content-page"><p className="muted">Восстанавливаем черновик…</p></section>;
   }
 
   if (!active) {
