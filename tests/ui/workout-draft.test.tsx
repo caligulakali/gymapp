@@ -46,4 +46,27 @@ describe('WorkoutPage draft', () => {
     await waitFor(() => expect(repos.draftRepository.clearDraft).toHaveBeenCalled());
     expect(screen.getByRole('heading', { name: 'Начать тренировку' })).toBeInTheDocument();
   });
+
+  it('waits for the latest draft save before clearing it', async () => {
+    const repos = repositories();
+    let releaseSave!: () => void;
+    repos.draftRepository.saveDraft.mockImplementation(() => new Promise<void>((resolve) => { releaseSave = resolve; }));
+    render(<WorkoutPage {...repos} createId={() => 'draft-1'} now={() => '2026-08-18T10:00:00.000Z'} />);
+    fireEvent.click(await screen.findByRole('button', { name: /Пустая тренировка/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Завершить и сохранить тренировку' }));
+
+    await waitFor(() => expect(repos.draftRepository.saveDraft).toHaveBeenCalled());
+    expect(repos.draftRepository.clearDraft).not.toHaveBeenCalled();
+    releaseSave();
+    await waitFor(() => expect(repos.draftRepository.clearDraft).toHaveBeenCalled());
+  });
+
+  it('rejects a malformed stored draft and removes it', async () => {
+    const repos = repositories();
+    repos.draftRepository.getDraft.mockResolvedValue({ id: 'broken', date: 'not-a-date', exercises: [] });
+    render(<WorkoutPage {...repos} createId={() => 'new-id'} now={() => '2026-08-18T10:00:00.000Z'} />);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Черновик повреждён');
+    expect(repos.draftRepository.clearDraft).toHaveBeenCalled();
+  });
 });

@@ -1,10 +1,11 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import type { Exercise, Template, Workout, WorkoutSet } from '../../db/entities';
 import { getMuscleGroupLabel } from '../../domain/muscle-groups';
 import type { ExerciseRepositoryPort } from '../../domain/exercise-repository-port';
 import type { TemplateRepositoryPort } from '../../domain/template-repository-port';
 import type { WorkoutRepositoryPort } from '../../domain/workout-repository-port';
 import type { WorkoutDraftRepositoryPort } from '../../domain/workout-draft-repository-port';
+import { validateWorkoutDraft } from '../../domain/workout-service';
 
 type Props = {
   workoutRepository: WorkoutRepositoryPort;
@@ -26,6 +27,9 @@ export function WorkoutPage({ workoutRepository, templateRepository, exerciseRep
   const [notes, setNotes] = useState('');
   const [saved, setSaved] = useState(false);
   const [draftLoaded, setDraftLoaded] = useState(!draftRepository);
+  const [draftError, setDraftError] = useState<string>();
+  const draftSaveQueue = useRef(Promise.resolve());
+  const latestDraft = useRef<Workout | undefined>(undefined);
 
   useEffect(() => {
     void Promise.all([templateRepository.getAll(), exerciseRepository.getAll()]).then(([nextTemplates, nextExercises]) => {
@@ -38,8 +42,15 @@ export function WorkoutPage({ workoutRepository, templateRepository, exerciseRep
     if (!draftRepository) return;
     void draftRepository.getDraft().then((draft) => {
       if (draft) {
-        setActive(draft);
-        setNotes(draft.notes ?? '');
+        const { id: _id, ...draftData } = draft;
+        const errors = validateWorkoutDraft(draftData);
+        if (errors.length > 0) {
+          setDraftError(`Черновик повреждён: ${errors[0]}`);
+          void draftRepository.clearDraft();
+        } else {
+          setActive(draft);
+          setNotes(draft.notes ?? '');
+        }
       }
       setDraftLoaded(true);
     }).catch(() => setDraftLoaded(true));
@@ -47,7 +58,11 @@ export function WorkoutPage({ workoutRepository, templateRepository, exerciseRep
 
   useEffect(() => {
     if (!draftRepository || !draftLoaded || !active) return;
-    void draftRepository.saveDraft({ ...active, notes: notes || undefined });
+    const snapshot = { ...active, notes: notes || undefined };
+    latestDraft.current = snapshot;
+    draftSaveQueue.current = draftSaveQueue.current.then(() => draftRepository.saveDraft(snapshot)).catch(() => {
+      setDraftError('Не удалось сохранить черновик');
+    });
   }, [active, notes, draftLoaded, draftRepository]);
 
   function start(template?: Template) {
@@ -83,8 +98,17 @@ export function WorkoutPage({ workoutRepository, templateRepository, exerciseRep
   async function save(event: FormEvent) {
     event.preventDefault();
     if (!active) return;
-    await workoutRepository.save({ ...active, notes: notes || undefined });
+    const { id: _id, ...draftData } = { ...active, notes: notes || undefined };
+    const errors = validateWorkoutDraft(draftData);
+    if (errors.length > 0) {
+      setDraftError(errors[0]);
+      return;
+    }
+    await draftSaveQueue.current;
+    const workout = latestDraft.current ?? { ...active, notes: notes || undefined };
+    await workoutRepository.save(workout);
     await draftRepository?.clearDraft();
+    setDraftError(undefined);
     setSaved(true);
     onSaved?.();
   }
@@ -104,7 +128,7 @@ export function WorkoutPage({ workoutRepository, templateRepository, exerciseRep
   if (!active) {
     return (
       <section className="content-page workout-picker" aria-labelledby="workout-picker-title">
-        <header className="page-header"><div><p className="eyebrow">Тренировка</p><h1 id="workout-picker-title">Начать тренировку</h1><p className="muted">Выбери готовый сценарий или начни с чистого листа.</p></div></header>
+        <header className="page-header"><div><p className="eyebrow">Тренировка</p><h1 id="workout-picker-title">Начать тренировку</h1><p className="muted">Выбери готовый сценарий или начни с чистого листа.</p></div></header>{draftError && <p className="error-message" role="alert">{draftError}</p>}
         <div className="workout-start-options"><button className="hero-start start-option" type="button" onClick={() => start()}><span className="hero-icon" aria-hidden="true">＋</span><span><strong>Пустая тренировка</strong><small>Добавь упражнения по ходу</small></span><span className="hero-arrow" aria-hidden="true">→</span></button></div>
         <div className="picker-section-heading"><div><p className="eyebrow">Быстрый старт</p><h2 className="picker-title">Твои шаблоны</h2></div><span className="picker-count">{templates.length}</span></div>
         <div className="template-picker">
