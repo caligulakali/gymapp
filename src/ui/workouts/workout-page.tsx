@@ -18,6 +18,8 @@ type Props = {
   confirmDiscard?: () => boolean;
 };
 
+type DraftSaveStatus = 'idle' | 'saving' | 'saved' | 'error';
+
 const emptySet = (): WorkoutSet => ({});
 
 function pluralize(count: number, forms: [string, string, string]): string {
@@ -38,7 +40,9 @@ export function WorkoutPage({ workoutRepository, templateRepository, exerciseRep
   const [saved, setSaved] = useState(false);
   const [draftLoaded, setDraftLoaded] = useState(!draftRepository);
   const [draftError, setDraftError] = useState<string>();
+  const [draftSaveStatus, setDraftSaveStatus] = useState<DraftSaveStatus>('idle');
   const draftSaveQueue = useRef(Promise.resolve());
+  const draftSaveGeneration = useRef(0);
   const isDiscarding = useRef(false);
 
   useEffect(() => {
@@ -61,6 +65,7 @@ export function WorkoutPage({ workoutRepository, templateRepository, exerciseRep
           setActive(draft);
           setNotes(draft.notes ?? '');
           setExpandedExerciseId(draft.exercises[0]?.exerciseId);
+          setDraftSaveStatus('saved');
         }
       }
       setDraftLoaded(true);
@@ -71,10 +76,21 @@ export function WorkoutPage({ workoutRepository, templateRepository, exerciseRep
     if (isDiscarding.current) return;
     const snapshot = { ...nextActive, notes: nextNotes || undefined };
     if (!draftRepository || !draftLoaded) return;
+    const generation = ++draftSaveGeneration.current;
+    setDraftSaveStatus('saving');
+    setDraftError(undefined);
     draftSaveQueue.current = draftSaveQueue.current
       .then(() => draftRepository.saveDraft(snapshot))
-      .then(() => setDraftError(undefined))
-      .catch(() => setDraftError('Не удалось сохранить черновик'));
+      .then(() => {
+        if (draftSaveGeneration.current !== generation) return;
+        setDraftError(undefined);
+        setDraftSaveStatus('saved');
+      })
+      .catch(() => {
+        if (draftSaveGeneration.current !== generation) return;
+        setDraftError('Не удалось сохранить черновик');
+        setDraftSaveStatus('error');
+      });
   }
 
   function updateActive(nextActive: Workout, nextNotes = notes): void {
@@ -151,6 +167,7 @@ export function WorkoutPage({ workoutRepository, templateRepository, exerciseRep
     setNotes('');
     setSaved(false);
     setExpandedExerciseId(undefined);
+    setDraftSaveStatus('idle');
     draftSaveQueue.current = draftSaveQueue.current
       .then(() => draftRepository?.clearDraft())
       .then(() => setDraftError(undefined))
@@ -182,14 +199,15 @@ export function WorkoutPage({ workoutRepository, templateRepository, exerciseRep
   return (
     <section className="content-page workout-page" aria-labelledby="active-workout-title">
       <header className="page-header active-workout-header"><div><p className="eyebrow"><span className="live-dot" /> В процессе</p><h1 id="active-workout-title">Тренировка: {activeTemplate?.name ?? 'Свободная'}</h1><p className="muted">Все изменения автоматически сохраняются в черновик</p></div><div className="workout-header-actions"><button className="ghost-button danger-button" type="button" onClick={() => void discardDraft()}>Отменить черновик</button></div></header>
-      <div className="workout-overview" aria-label="Состав тренировки"><span><strong>{active.exercises.length}</strong><small>{pluralize(active.exercises.length, ['упражнение', 'упражнения', 'упражнений'])}</small></span><i /><span><strong>{active.exercises.reduce((sum, item) => sum + item.sets.length, 0)}</strong><small>{pluralize(active.exercises.reduce((sum, item) => sum + item.sets.length, 0), ['подход', 'подхода', 'подходов'])}</small></span><span className="autosave-status"><b>✓</b> Черновик сохранён</span></div>
+      <div className="workout-overview" aria-label="Состав тренировки"><span><strong>{active.exercises.length}</strong><small>{pluralize(active.exercises.length, ['упражнение', 'упражнения', 'упражнений'])}</small></span><i /><span><strong>{active.exercises.reduce((sum, item) => sum + item.sets.length, 0)}</strong><small>{pluralize(active.exercises.reduce((sum, item) => sum + item.sets.length, 0), ['подход', 'подхода', 'подходов'])}</small></span>{draftRepository && draftSaveStatus !== 'idle' && draftSaveStatus !== 'error' && <span className={`autosave-status is-${draftSaveStatus}`} role="status"><b>{draftSaveStatus === 'saving' ? '·' : '✓'}</b>{draftSaveStatus === 'saving' ? 'Сохраняем…' : 'Черновик сохранён'}</span>}</div>
+      {draftError && <p className="error-message workout-draft-error" role="alert">{draftError}</p>}
       <form onSubmit={(event) => void save(event)}>
         <div className="workout-exercises">{active.exercises.map((item, exerciseIndex) => {
           const exercise = exercises.find((candidate) => candidate.id === item.exerciseId);
           const name = exercise?.name ?? 'Удалённое упражнение';
           const isExpanded = expandedExerciseId === item.exerciseId;
           const panelId = `workout-exercise-${item.exerciseId}`;
-          return <article className={`workout-card focused-workout-card${isExpanded ? ' is-expanded' : ''}`} key={item.exerciseId}><div className="workout-card-heading"><div><span className="exercise-number">{String(exerciseIndex + 1).padStart(2, '0')}</span><span className="workout-card-title"><h2>{name}</h2><small>{item.sets.length} {pluralize(item.sets.length, ['подход', 'подхода', 'подходов'])}{exercise && ` · ${getMuscleGroupLabel(exercise.muscleGroup)}`}</small></span></div><button className="workout-collapse" type="button" aria-label={`${isExpanded ? 'Свернуть' : 'Развернуть'} ${name}`} aria-expanded={isExpanded} aria-controls={panelId} onClick={() => setExpandedExerciseId(isExpanded ? undefined : item.exerciseId)}><span aria-hidden="true">⌄</span></button></div>{isExpanded && <div className="workout-card-body" id={panelId}><div className="set-header"><span>№</span><span>Вес, кг</span><span>Повторы</span><span>Дополнительно</span></div>{item.sets.map((set, setIndex) => <div className="set-row" key={setIndex}><span className="set-number">{setIndex + 1}</span><input aria-label={`Вес подхода ${setIndex + 1} для ${name}`} inputMode="decimal" placeholder="—" type="number" min="0" step="0.5" value={set.weight ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, 'weight', event.target.value)} /><input aria-label={`Повторы подхода ${setIndex + 1} для ${name}`} inputMode="numeric" placeholder="—" type="number" min="0" value={set.reps ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, 'reps', event.target.value)} /><input aria-label={`Время подхода ${setIndex + 1} для ${name}`} inputMode="numeric" placeholder="сек" type="number" min="0" value={set.time ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, 'time', event.target.value)} /><input aria-label={`Расстояние подхода ${setIndex + 1} для ${name}`} inputMode="decimal" placeholder="км" type="number" min="0" step="0.1" value={set.distance ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, 'distance', event.target.value)} /><input aria-label={`Отдых после подхода ${setIndex + 1} для ${name}`} inputMode="numeric" placeholder="отдых" type="number" min="0" value={set.rest ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, 'rest', event.target.value)} /><button className="set-check" type="button" aria-label={`Удалить подход ${setIndex + 1} для ${name}`} onClick={() => updateActive({ ...active, exercises: active.exercises.map((current, index) => index !== exerciseIndex ? current : { ...current, sets: current.sets.filter((_, currentSet) => currentSet !== setIndex) }) })}>×</button></div>)}<button className="add-set" type="button" onClick={() => updateActive({ ...active, exercises: active.exercises.map((current, index) => index !== exerciseIndex ? current : { ...current, sets: [...current.sets, emptySet()] }) })}>＋ Добавить подход</button></div>}</article>;
+          return <article className={`workout-card focused-workout-card${isExpanded ? ' is-expanded' : ''}`} key={item.exerciseId}><div className="workout-card-heading"><div><span className="exercise-number">{String(exerciseIndex + 1).padStart(2, '0')}</span><span className="workout-card-title"><h2>{name}</h2><small>{item.sets.length} {pluralize(item.sets.length, ['подход', 'подхода', 'подходов'])}{exercise && ` · ${getMuscleGroupLabel(exercise.muscleGroup)}`}</small></span></div><button className="workout-collapse" type="button" aria-label={`${isExpanded ? 'Свернуть' : 'Развернуть'} ${name}`} aria-expanded={isExpanded} aria-controls={panelId} onClick={() => setExpandedExerciseId(isExpanded ? undefined : item.exerciseId)}><span aria-hidden="true">⌄</span></button></div><div className="workout-card-body" id={panelId} hidden={!isExpanded}><div className="set-header"><span>№</span><span>Вес, {exercise?.unit ?? 'kg'}</span><span>Повторы</span><span>Дополнительно</span></div>{item.sets.map((set, setIndex) => <div className="set-row" key={setIndex}><span className="set-number">{setIndex + 1}</span><input aria-label={`Вес подхода ${setIndex + 1} для ${name}`} inputMode="decimal" placeholder="—" type="number" min="0" step="0.5" value={set.weight ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, 'weight', event.target.value)} /><input aria-label={`Повторы подхода ${setIndex + 1} для ${name}`} inputMode="numeric" placeholder="—" type="number" min="0" value={set.reps ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, 'reps', event.target.value)} /><input aria-label={`Время подхода ${setIndex + 1} для ${name}`} inputMode="numeric" placeholder="сек" type="number" min="0" value={set.time ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, 'time', event.target.value)} /><input aria-label={`Расстояние подхода ${setIndex + 1} для ${name}`} inputMode="decimal" placeholder="км" type="number" min="0" step="0.1" value={set.distance ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, 'distance', event.target.value)} /><input aria-label={`Отдых после подхода ${setIndex + 1} для ${name}`} inputMode="numeric" placeholder="отдых" type="number" min="0" value={set.rest ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, 'rest', event.target.value)} /><button className="set-check" type="button" aria-label={`Удалить подход ${setIndex + 1} для ${name}`} onClick={() => updateActive({ ...active, exercises: active.exercises.map((current, index) => index !== exerciseIndex ? current : { ...current, sets: current.sets.filter((_, currentSet) => currentSet !== setIndex) }) })}>×</button></div>)}<button className="add-set" type="button" onClick={() => updateActive({ ...active, exercises: active.exercises.map((current, index) => index !== exerciseIndex ? current : { ...current, sets: [...current.sets, emptySet()] }) })}>＋ Добавить подход</button></div></article>;
         })}</div>
         {availableExercises.length > 0 && <section className="add-exercise-row exercise-selector" aria-labelledby="exercise-selector-title"><div className="exercise-selector-heading"><div><p className="eyebrow">Следующий шаг</p><h2 id="exercise-selector-title">Добавить упражнение</h2></div><span>{availableExercises.length}</span></div><p>Выберите из своего справочника — новое упражнение сразу появится в тренировке.</p><div className="exercise-choice-grid">{availableExercises.map((exercise) => <button className="chip-button exercise-choice" type="button" key={exercise.id} aria-label={`Добавить ${exercise.name}`} onClick={() => addExercise(exercise.id)}><span className="exercise-choice-icon" aria-hidden="true">＋</span><span><strong>{exercise.name}</strong><small>{getMuscleGroupLabel(exercise.muscleGroup)}</small></span></button>)}</div></section>}
         {availableExercises.length === 0 && active.exercises.length === 0 && <section className="exercise-selector compact-empty-selector" aria-labelledby="exercise-selector-title"><div className="exercise-selector-heading"><div><p className="eyebrow">Нужен справочник</p><h2 id="exercise-selector-title">Нет доступных упражнений</h2></div></div><p>Добавь упражнения в справочник, затем вернись к тренировке.</p></section>}

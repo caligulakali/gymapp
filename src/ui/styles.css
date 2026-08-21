@@ -315,6 +315,10 @@ textarea { min-height: 90px; resize: vertical; } select { appearance: none; back
 .workout-overview > i { width: 1px; height: 22px; background: var(--line); }
 .autosave-status { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; color: #77bda2; font-size: .63rem; font-weight: 700; }
 .autosave-status b { display: grid; width: 20px; height: 20px; place-items: center; border-radius: 7px; color: var(--success); background: rgba(82,214,162,.08); font-size: .6rem; }
+.autosave-status.is-saving { color: var(--muted); }
+.autosave-status.is-saving b { color: var(--accent-light); background: rgba(95,124,255,.08); animation: autosave-pulse 1s ease-in-out infinite alternate; }
+@keyframes autosave-pulse { to { opacity: .45; } }
+.workout-draft-error { margin: -6px 0 16px; }
 .focused-workout-card { padding: 0; overflow: hidden; }
 .focused-workout-card.is-expanded { border-color: rgba(124,142,255,.2); box-shadow: 0 12px 35px rgba(0,0,0,.12); }
 .focused-workout-card .workout-card-heading { min-height: 72px; margin: 0; padding: 13px 15px; }
