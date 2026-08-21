@@ -21,6 +21,10 @@ function createRepository(exercises: Exercise[] = []) {
   };
 }
 
+async function openNewExercise(): Promise<void> {
+  fireEvent.click(await screen.findByRole('button', { name: 'Новое упражнение' }));
+}
+
 afterEach(() => {
   vi.restoreAllMocks();
 });
@@ -30,10 +34,15 @@ describe('ExercisePage', () => {
     const repository = createRepository();
     render(<ExercisePage repository={repository} />);
 
-    fireEvent.change(await screen.findByLabelText('Название'), { target: { value: 'Тяга верхнего блока' } });
+    expect(await screen.findByRole('button', { name: 'Новое упражнение' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Название')).not.toBeInTheDocument();
+    await openNewExercise();
+    fireEvent.change(screen.getByLabelText('Название'), { target: { value: 'Тяга верхнего блока' } });
     fireEvent.change(screen.getByLabelText('Мышечная группа'), { target: { value: 'back' } });
     fireEvent.change(screen.getByLabelText('Тип'), { target: { value: 'strength' } });
     fireEvent.change(screen.getByLabelText('Единица веса'), { target: { value: 'kg' } });
+    expect(screen.queryByLabelText('Заметки')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Дополнительно' }));
     fireEvent.change(screen.getByLabelText('Заметки'), { target: { value: 'Техника' } });
     fireEvent.click(screen.getByLabelText('Избранное'));
     fireEvent.click(screen.getByRole('button', { name: 'Сохранить упражнение' }));
@@ -46,6 +55,21 @@ describe('ExercisePage', () => {
       notes: 'Техника',
       favourite: true
     })));
+    expect(await screen.findByRole('button', { name: 'Новое упражнение' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Название')).not.toBeInTheDocument();
+    expect(screen.getByText('Тяга верхнего блока')).toBeInTheDocument();
+  });
+
+  it('returns from a new exercise without saving', async () => {
+    const repository = createRepository();
+    render(<ExercisePage repository={repository} />);
+
+    await openNewExercise();
+    fireEvent.change(screen.getByLabelText('Название'), { target: { value: 'Несохранённое упражнение' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Назад к упражнениям' }));
+
+    expect(await screen.findByRole('button', { name: 'Новое упражнение' })).toBeInTheDocument();
+    expect(repository.save).not.toHaveBeenCalled();
   });
 
   it('edits an existing exercise', async () => {
@@ -62,6 +86,8 @@ describe('ExercisePage', () => {
       name: 'Жим гантелей',
       notes: undefined
     }));
+    expect(await screen.findByRole('button', { name: 'Новое упражнение' })).toBeInTheDocument();
+    expect(screen.getByText('Жим гантелей')).toBeInTheDocument();
   });
 
   it('asks for confirmation before deleting an exercise', async () => {
@@ -92,7 +118,8 @@ describe('ExercisePage', () => {
   it('shows detailed muscle groups grouped by category', async () => {
     render(<ExercisePage repository={createRepository()} />);
 
-    const select = await screen.findByLabelText('Мышечная группа');
+    await openNewExercise();
+    const select = screen.getByLabelText('Мышечная группа');
     const armsGroup = select.querySelector('optgroup[label="Руки"]');
     expect(armsGroup).toBeInTheDocument();
     expect(armsGroup).toHaveTextContent('Бицепс');
@@ -103,6 +130,7 @@ describe('ExercisePage', () => {
   it('opens a visual muscle group catalog and selects a subgroup', async () => {
     render(<ExercisePage repository={createRepository()} />);
 
+    await openNewExercise();
     fireEvent.click(screen.getByRole('button', { name: 'Выбрать мышечную группу' }));
 
     const menu = document.querySelector('.muscle-picker-menu');
@@ -119,7 +147,8 @@ describe('ExercisePage', () => {
     const repository = createRepository();
     render(<ExercisePage repository={repository} />);
 
-    fireEvent.change(await screen.findByLabelText('Название'), { target: { value: 'Подъём штанги' } });
+    await openNewExercise();
+    fireEvent.change(screen.getByLabelText('Название'), { target: { value: 'Подъём штанги' } });
     fireEvent.change(screen.getByLabelText('Мышечная группа'), { target: { value: 'arms_biceps' } });
     fireEvent.click(screen.getByRole('button', { name: 'Сохранить упражнение' }));
 
@@ -131,6 +160,7 @@ describe('ExercisePage', () => {
   it('uses visual controls for exercise type and weight unit', async () => {
     render(<ExercisePage repository={createRepository()} />);
 
+    await openNewExercise();
     fireEvent.click(screen.getByRole('button', { name: 'Выбрать тип упражнения' }));
     fireEvent.click(screen.getByRole('radio', { name: 'На время' }));
 
@@ -145,6 +175,23 @@ describe('ExercisePage', () => {
     render(<ExercisePage repository={createRepository([detailedExercise])} />);
 
     expect(await within(screen.getByLabelText('Список упражнений')).findByText('Бицепс')).toBeInTheDocument();
+  });
+
+  it('filters the exercise catalogue locally and restores it when cleared', async () => {
+    const row: Exercise = { ...exercise, id: 'exercise-2', name: 'Тяга блока', muscleGroup: 'back' };
+    const repository = createRepository([exercise, row]);
+    render(<ExercisePage repository={repository} />);
+
+    const search = await screen.findByRole('searchbox', { name: 'Поиск упражнений' });
+    expect(screen.getByText('Жим лёжа')).toBeInTheDocument();
+    expect(screen.getByText('Тяга блока')).toBeInTheDocument();
+    fireEvent.change(search, { target: { value: 'тяга' } });
+    expect(screen.queryByText('Жим лёжа')).not.toBeInTheDocument();
+    expect(screen.getByText('Тяга блока')).toBeInTheDocument();
+    fireEvent.change(search, { target: { value: '' } });
+    expect(screen.getByText('Жим лёжа')).toBeInTheDocument();
+    expect(screen.getByText('Тяга блока')).toBeInTheDocument();
+    expect(repository.getAll).toHaveBeenCalledOnce();
   });
 
   it('keeps rendering when a stored exercise has an unknown muscle group', async () => {

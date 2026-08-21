@@ -34,6 +34,10 @@ function createRepositories(templates: Template[] = []) {
   };
 }
 
+async function openNewTemplate(): Promise<void> {
+  fireEvent.click(await screen.findByRole('button', { name: 'Новый шаблон' }));
+}
+
 afterEach(() => vi.restoreAllMocks());
 
 describe('TemplatePage', () => {
@@ -51,25 +55,42 @@ describe('TemplatePage', () => {
     expect(screen.queryByText('internal-removed-id')).not.toBeInTheDocument();
   });
 
-  it('uses a clear hierarchy for template actions', async () => {
+  it('opens a dedicated editor for a new template', async () => {
     const repositories = createRepositories();
     render(<TemplatePage {...repositories} />);
 
-    expect(await screen.findByRole('button', { name: 'Добавить упражнение в шаблон' })).toHaveClass('secondary-button');
-    expect(screen.getByRole('button', { name: 'Сохранить шаблон' })).toHaveClass('primary-submit');
+    expect(await screen.findByRole('button', { name: 'Новый шаблон' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Название шаблона')).not.toBeInTheDocument();
+    await openNewTemplate();
+    expect(screen.getByRole('heading', { name: 'Новый шаблон' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Добавить упражнение в шаблон' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Сохранить шаблон' })).toBeInTheDocument();
+  });
+
+  it('returns from a new template without saving', async () => {
+    const repositories = createRepositories();
+    render(<TemplatePage {...repositories} />);
+
+    await openNewTemplate();
+    fireEvent.change(screen.getByLabelText('Название шаблона'), { target: { value: 'Черновик' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Назад к шаблонам' }));
+
+    expect(await screen.findByRole('button', { name: 'Новый шаблон' })).toBeInTheDocument();
+    expect(repositories.templateRepository.save).not.toHaveBeenCalled();
   });
 
   it('opens exercise selection and adds the chosen exercise as an editable template card', async () => {
     const repositories = createRepositories();
     render(<TemplatePage {...repositories} />);
 
-    fireEvent.change(await screen.findByLabelText('Название шаблона'), { target: { value: 'Сильные ноги' } });
+    await openNewTemplate();
+    fireEvent.change(screen.getByLabelText('Название шаблона'), { target: { value: 'Сильные ноги' } });
     fireEvent.click(screen.getByRole('button', { name: 'Добавить упражнение в шаблон' }));
 
     await screen.findByRole('heading', { name: 'Упражнения' });
     fireEvent.click(await screen.findByRole('button', { name: 'Выбрать Приседания' }));
 
-    await screen.findByRole('heading', { name: 'Шаблоны' });
+    await screen.findByRole('heading', { name: 'Новый шаблон' });
     expect(screen.getByRole('heading', { name: 'Приседания' })).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Заметки шаблона'), { target: { value: 'Контроль техники' } });
     fireEvent.change(screen.getByLabelText('Подходы для Приседания'), { target: { value: '5' } });
@@ -86,19 +107,23 @@ describe('TemplatePage', () => {
       notes: 'Контроль техники',
       exercises: [{ exerciseId: 'exercise-1', order: 0, sets: 5, targetReps: 6, targetWeight: 110 }]
     })));
+    expect(await screen.findByRole('button', { name: 'Новый шаблон' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Название шаблона')).not.toBeInTheDocument();
+    expect(screen.getByText('Сильные ноги')).toBeInTheDocument();
   });
 
   it('keeps the template draft when returning from exercise selection', async () => {
     const repositories = createRepositories();
     render(<TemplatePage {...repositories} />);
 
-    fireEvent.change(await screen.findByLabelText('Название шаблона'), { target: { value: 'Мой шаблон' } });
+    await openNewTemplate();
+    fireEvent.change(screen.getByLabelText('Название шаблона'), { target: { value: 'Мой шаблон' } });
     fireEvent.change(screen.getByLabelText('Заметки шаблона'), { target: { value: 'Не терять черновик' } });
     fireEvent.click(screen.getByRole('button', { name: 'Добавить упражнение в шаблон' }));
     await screen.findByRole('heading', { name: 'Упражнения' });
     fireEvent.click(await screen.findByRole('button', { name: 'Выбрать Приседания' }));
 
-    await screen.findByRole('heading', { name: 'Шаблоны' });
+    await screen.findByRole('heading', { name: 'Новый шаблон' });
     fireEvent.change(screen.getByLabelText('Подходы для Приседания'), { target: { value: '4' } });
     fireEvent.change(screen.getByLabelText('Повторы для Приседания'), { target: { value: '10' } });
     fireEvent.change(screen.getByLabelText('Вес для Приседания'), { target: { value: '80' } });
@@ -106,7 +131,7 @@ describe('TemplatePage', () => {
     await screen.findByRole('heading', { name: 'Упражнения' });
     fireEvent.click(screen.getByRole('button', { name: 'Вернуться к шаблону' }));
 
-    await screen.findByRole('heading', { name: 'Шаблоны' });
+    await screen.findByRole('heading', { name: 'Новый шаблон' });
     expect(screen.getByLabelText('Название шаблона')).toHaveValue('Мой шаблон');
     expect(screen.getByLabelText('Заметки шаблона')).toHaveValue('Не терять черновик');
     expect(screen.getByLabelText('Подходы для Приседания')).toHaveValue(4);
@@ -119,15 +144,16 @@ describe('TemplatePage', () => {
     const repositories = createRepositories();
     render(<TemplatePage {...repositories} />);
 
-    fireEvent.change(await screen.findByLabelText('Название шаблона'), { target: { value: 'Без дублей' } });
+    await openNewTemplate();
+    fireEvent.change(screen.getByLabelText('Название шаблона'), { target: { value: 'Без дублей' } });
     fireEvent.click(screen.getByRole('button', { name: 'Добавить упражнение в шаблон' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Выбрать Приседания' }));
 
-    await screen.findByRole('heading', { name: 'Шаблоны' });
+    await screen.findByRole('heading', { name: 'Новый шаблон' });
     fireEvent.click(screen.getByRole('button', { name: 'Добавить упражнение в шаблон' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Выбрать Приседания' }));
 
-    await screen.findByRole('heading', { name: 'Шаблоны' });
+    await screen.findByRole('heading', { name: 'Новый шаблон' });
     expect(screen.getAllByRole('heading', { name: 'Приседания' })).toHaveLength(1);
     expect(screen.getByRole('alert')).toHaveTextContent('Это упражнение уже добавлено в шаблон');
     fireEvent.click(screen.getByRole('button', { name: 'Сохранить шаблон' }));
@@ -149,6 +175,8 @@ describe('TemplatePage', () => {
       ...template,
       name: 'Ноги и ягодицы'
     }));
+    expect(await screen.findByRole('button', { name: 'Новый шаблон' })).toBeInTheDocument();
+    expect(screen.getByText('Ноги и ягодицы')).toBeInTheDocument();
   });
 
   it('duplicates an existing template with a new id', async () => {
