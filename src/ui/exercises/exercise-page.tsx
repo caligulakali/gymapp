@@ -9,6 +9,7 @@ type ExercisePageProps = {
   createId?: () => string;
   onSelectExercise?: (exercise: Exercise) => void;
   onBack?: () => void;
+  onChanged?: () => void;
 };
 
 type FormState = ExerciseDraft & { favourite: boolean };
@@ -30,7 +31,7 @@ function makeId(): string {
   return crypto.randomUUID();
 }
 
-export function ExercisePage({ repository, createId = makeId, onSelectExercise, onBack }: ExercisePageProps) {
+export function ExercisePage({ repository, createId = makeId, onSelectExercise, onBack, onChanged }: ExercisePageProps) {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [editingId, setEditingId] = useState<string | undefined>();
@@ -71,6 +72,7 @@ export function ExercisePage({ repository, createId = makeId, onSelectExercise, 
       const entity = createExercise(form, editingId ?? createId());
       const savedEntity = { ...entity, favourite: form.favourite };
       await repository.save(savedEntity);
+      onChanged?.();
       setExercises((current) => editingId
         ? current.map((item) => item.id === editingId ? savedEntity : item)
         : [...current, savedEntity]);
@@ -97,6 +99,7 @@ export function ExercisePage({ repository, createId = makeId, onSelectExercise, 
     if (!window.confirm(`Удалить упражнение «${exercise.name}»? История тренировок сохранится. В существующих шаблонах оно будет отмечено как удалённое.`)) return;
     try {
       await repository.remove(exercise.id);
+      onChanged?.();
       setExercises((current) => current.filter((item) => item.id !== exercise.id));
       if (editingId === exercise.id) {
         setForm(EMPTY_FORM);

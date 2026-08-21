@@ -29,6 +29,7 @@ export function WorkoutPage({ workoutRepository, templateRepository, exerciseRep
   const [draftLoaded, setDraftLoaded] = useState(!draftRepository);
   const [draftError, setDraftError] = useState<string>();
   const draftSaveQueue = useRef(Promise.resolve());
+  const isDiscarding = useRef(false);
 
   useEffect(() => {
     void Promise.all([templateRepository.getAll(), exerciseRepository.getAll()]).then(([nextTemplates, nextExercises]) => {
@@ -56,6 +57,7 @@ export function WorkoutPage({ workoutRepository, templateRepository, exerciseRep
   }, [draftRepository]);
 
   function scheduleDraft(nextActive: Workout, nextNotes: string): void {
+    if (isDiscarding.current) return;
     const snapshot = { ...nextActive, notes: nextNotes || undefined };
     if (!draftRepository || !draftLoaded) return;
     draftSaveQueue.current = draftSaveQueue.current
@@ -70,6 +72,7 @@ export function WorkoutPage({ workoutRepository, templateRepository, exerciseRep
   }
 
   function start(template?: Template) {
+    isDiscarding.current = false;
     const nextActive: Workout = {
       id: createId(),
       templateId: template?.id,
@@ -130,11 +133,15 @@ export function WorkoutPage({ workoutRepository, templateRepository, exerciseRep
 
   async function discardDraft(): Promise<void> {
     if (!confirmDiscard()) return;
-    await draftSaveQueue.current;
-    await draftRepository?.clearDraft();
+    isDiscarding.current = true;
     setActive(undefined);
     setNotes('');
     setSaved(false);
+    draftSaveQueue.current = draftSaveQueue.current
+      .then(() => draftRepository?.clearDraft())
+      .then(() => setDraftError(undefined))
+      .catch(() => setDraftError('Не удалось удалить черновик'));
+    await draftSaveQueue.current;
   }
 
   if (!draftLoaded) {
