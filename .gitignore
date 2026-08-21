@@ -31,6 +31,7 @@ pnpm-debug.log*
 PROJECT_SPEC.md
 AGENTS.md
 ARCHITECTURE.md
+tech_debt/
 
 # Environment variables (secrets)
 .env
