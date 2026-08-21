@@ -54,6 +54,25 @@ describe('App', () => {
     expect(within(mobileNavigation).getByRole('button', { name: 'Шаблоны' })).toBeInTheDocument();
   });
 
+  it('switches sections from mobile navigation and exposes the active destination', async () => {
+    render(<App />);
+
+    const mobileNavigation = screen.getByRole('navigation', { name: 'Мобильная навигация' });
+    const overview = within(mobileNavigation).getByRole('button', { name: 'Обзор' });
+    const history = within(mobileNavigation).getByRole('button', { name: 'История' });
+    const templates = within(mobileNavigation).getByRole('button', { name: 'Шаблоны' });
+
+    expect(overview).toHaveAttribute('aria-current', 'page');
+    fireEvent.click(history);
+    expect(await screen.findByRole('heading', { name: 'История' })).toBeInTheDocument();
+    expect(history).toHaveAttribute('aria-current', 'page');
+
+    fireEvent.click(templates);
+    expect(await screen.findByRole('heading', { name: 'Шаблоны' })).toBeInTheDocument();
+    expect(templates).toHaveAttribute('aria-current', 'page');
+    expect(overview).not.toHaveAttribute('aria-current');
+  });
+
   it('refreshes shared data after import without a page reload', async () => {
     let imported = false;
     const importedWorkout = { id: 'imported-workout', date: '2026-08-18T10:00:00.000Z', exercises: [] };
