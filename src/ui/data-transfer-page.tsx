@@ -7,6 +7,7 @@ type Props = {
   now?: () => string;
   download?: (content: string, filename: string, mimeType: string) => void;
   confirmImport?: () => boolean;
+  onChanged?: () => void;
 };
 
 function defaultDownload(content: string, filename: string, mimeType: string): void {
@@ -17,7 +18,7 @@ function defaultDownload(content: string, filename: string, mimeType: string): v
   URL.revokeObjectURL(link.href);
 }
 
-export function DataTransferPage({ repository, now = () => new Date().toISOString(), download = defaultDownload, confirmImport = () => window.confirm('Заменить текущие локальные данные содержимым файла?') }: Props) {
+export function DataTransferPage({ repository, now = () => new Date().toISOString(), download = defaultDownload, confirmImport = () => window.confirm('Заменить текущие локальные данные содержимым файла? Текущий черновик тренировки будет удалён.'), onChanged }: Props) {
   const [message, setMessage] = useState<string>();
   const [error, setError] = useState<string>();
 
@@ -46,6 +47,7 @@ export function DataTransferPage({ repository, now = () => new Date().toISOStrin
       const data = importGymApp(await file.text());
       if (!confirmImport()) return;
       await repository.replaceData(data);
+      onChanged?.();
       setError(undefined);
       setMessage('Данные успешно восстановлены');
     } catch (reason) {

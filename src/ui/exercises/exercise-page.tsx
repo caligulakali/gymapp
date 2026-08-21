@@ -94,7 +94,7 @@ export function ExercisePage({ repository, createId = makeId, onSelectExercise, 
   }
 
   async function handleDelete(exercise: Exercise) {
-    if (!window.confirm(`Удалить упражнение «${exercise.name}»? История тренировок сохранится, но упражнение будет убрано из шаблонов.`)) return;
+    if (!window.confirm(`Удалить упражнение «${exercise.name}»? История тренировок сохранится. В существующих шаблонах оно будет отмечено как удалённое.`)) return;
     try {
       await repository.remove(exercise.id);
       setExercises((current) => current.filter((item) => item.id !== exercise.id));

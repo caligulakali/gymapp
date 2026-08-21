@@ -65,7 +65,7 @@
 .import-file-label { display: inline-flex; margin-top: 16px; cursor: pointer; }
 .import-file-label input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 .error-message { color: #ff8f8f; text-align: center; }
-@media (max-width: 760px) { .mobile-nav nav { grid-template-columns: repeat(6, minmax(0, 1fr)); } .data-transfer-actions > * { flex: 1 1 100%; } }
+@media (max-width: 760px) { .mobile-nav nav { grid-template-columns: repeat(5, minmax(0, 1fr)); } .data-transfer-actions > * { flex: 1 1 100%; } }
 @media (max-width: 760px) { .history-filters { grid-template-columns: 1fr; } }
 
 .muscle-group-field { position: relative; }

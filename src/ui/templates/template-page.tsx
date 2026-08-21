@@ -151,7 +151,7 @@ export function TemplatePage({ templateRepository, exerciseRepository, createId 
         <button className="secondary-button add-exercise-button" type="button" onClick={() => setIsSelectingExercise(true)}><span aria-hidden="true">＋</span> Добавить упражнение в шаблон</button>
         <div className="template-exercise-list" aria-label="Упражнения шаблона">{form.exercises.map((item, index) => {
           const exercise = exercises.find((candidate) => candidate.id === item.exerciseId);
-          const name = exercise?.name ?? item.exerciseId;
+          const name = exercise?.name ?? 'Удалённое упражнение';
           return <article className="template-exercise-card" key={`${item.exerciseId}-${item.order}`}>
             <div><p className="eyebrow">Упражнение {index + 1}</p><h3>{name}</h3></div>
             <label>Подходы для {name}<input aria-label={`Подходы для ${name}`} type="number" min="1" value={item.sets} onChange={(event) => updateExerciseTarget(index, 'sets', event.target.value)} /></label>
