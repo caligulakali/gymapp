@@ -9,6 +9,7 @@ type TemplatePageProps = {
   templateRepository: TemplateRepositoryPort;
   exerciseRepository: ExerciseRepositoryPort;
   createId?: () => string;
+  onChanged?: () => void;
 };
 
 type FormState = Omit<TemplateDraft, 'exercises'> & { exercises: TemplateExercise[] };
@@ -19,7 +20,7 @@ function makeId(): string {
   return crypto.randomUUID();
 }
 
-export function TemplatePage({ templateRepository, exerciseRepository, createId = makeId }: TemplatePageProps) {
+export function TemplatePage({ templateRepository, exerciseRepository, createId = makeId, onChanged }: TemplatePageProps) {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
@@ -90,6 +91,7 @@ export function TemplatePage({ templateRepository, exerciseRepository, createId 
     try {
       const entity = createTemplate(form, editingId ?? createId());
       await templateRepository.save(entity);
+      onChanged?.();
       setTemplates((current) => editingId
         ? current.map((item) => item.id === editingId ? entity : item)
         : [...current, entity]);
@@ -109,6 +111,7 @@ export function TemplatePage({ templateRepository, exerciseRepository, createId 
     if (!window.confirm(`Удалить шаблон «${template.name}»? История тренировок сохранится.`)) return;
     try {
       await templateRepository.remove(template.id);
+      onChanged?.();
       setTemplates((current) => current.filter((item) => item.id !== template.id));
       if (editingId === template.id) {
         setForm(EMPTY_FORM);
@@ -128,6 +131,7 @@ export function TemplatePage({ templateRepository, exerciseRepository, createId 
     };
     try {
       await templateRepository.save(copy);
+      onChanged?.();
       setTemplates((current) => [...current, copy]);
     } catch {
       setError('Не удалось дублировать шаблон');
@@ -135,7 +139,7 @@ export function TemplatePage({ templateRepository, exerciseRepository, createId 
   }
 
   if (isSelectingExercise) {
-    return <ExercisePage repository={exerciseRepository} onSelectExercise={selectExercise} onBack={() => setIsSelectingExercise(false)} />;
+    return <ExercisePage repository={exerciseRepository} onSelectExercise={selectExercise} onBack={() => setIsSelectingExercise(false)} onChanged={onChanged} />;
   }
 
   return (
@@ -151,7 +155,7 @@ export function TemplatePage({ templateRepository, exerciseRepository, createId 
         <button className="secondary-button add-exercise-button" type="button" onClick={() => setIsSelectingExercise(true)}><span aria-hidden="true">＋</span> Добавить упражнение в шаблон</button>
         <div className="template-exercise-list" aria-label="Упражнения шаблона">{form.exercises.map((item, index) => {
           const exercise = exercises.find((candidate) => candidate.id === item.exerciseId);
-          const name = exercise?.name ?? item.exerciseId;
+          const name = exercise?.name ?? 'Удалённое упражнение';
           return <article className="template-exercise-card" key={`${item.exerciseId}-${item.order}`}>
             <div><p className="eyebrow">Упражнение {index + 1}</p><h3>{name}</h3></div>
             <label>Подходы для {name}<input aria-label={`Подходы для ${name}`} type="number" min="1" value={item.sets} onChange={(event) => updateExerciseTarget(index, 'sets', event.target.value)} /></label>

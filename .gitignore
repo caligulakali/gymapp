@@ -31,6 +31,21 @@ pnpm-debug.log*
 PROJECT_SPEC.md
 AGENTS.md
 ARCHITECTURE.md
+tech_debt/
+
+# Internal AI/workflow notes — local only
+INTERNAL*.md
+PROMPT*.md
+PROMPTS/
+prompts/
+GOAL*.md
+GOALS/
+goals/
+BUG*.md
+BUGS/
+bugs/
+PLANS/
+plans/
 
 # Environment variables (secrets)
 .env

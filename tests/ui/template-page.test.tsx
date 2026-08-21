@@ -37,6 +37,20 @@ function createRepositories(templates: Template[] = []) {
 afterEach(() => vi.restoreAllMocks());
 
 describe('TemplatePage', () => {
+  it('shows a safe fallback for an exercise missing from the catalogue', async () => {
+    const missingExerciseTemplate: Template = {
+      ...template,
+      exercises: [{ exerciseId: 'internal-removed-id', order: 0, sets: 3 }]
+    };
+    const repositories = createRepositories([missingExerciseTemplate]);
+    repositories.exerciseRepository.getAll.mockResolvedValue([]);
+    render(<TemplatePage {...repositories} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Редактировать шаблон Ноги' }));
+    expect(screen.getByRole('heading', { name: 'Удалённое упражнение' })).toBeInTheDocument();
+    expect(screen.queryByText('internal-removed-id')).not.toBeInTheDocument();
+  });
+
   it('uses a clear hierarchy for template actions', async () => {
     const repositories = createRepositories();
     render(<TemplatePage {...repositories} />);

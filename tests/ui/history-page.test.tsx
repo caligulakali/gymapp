@@ -23,11 +23,11 @@ function repository() {
 describe('HistoryPage', () => {
   it('opens and saves edits for a completed workout', async () => {
     const repo = repository();
-    render(<HistoryPage workouts={[workout]} repository={repo} />);
+    render(<HistoryPage workouts={[workout]} repository={repo} exercises={[exercise]} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Открыть тренировку Свободная тренировка' }));
     fireEvent.change(screen.getByLabelText('Заметки тренировки'), { target: { value: 'Обновлённая заметка' } });
-    fireEvent.change(screen.getByLabelText('Вес подхода 1 для squat'), { target: { value: '105' } });
+    fireEvent.change(screen.getByLabelText('Вес подхода 1 для Приседания'), { target: { value: '105' } });
     fireEvent.click(screen.getByRole('button', { name: 'Сохранить изменения' }));
 
     await waitFor(() => expect(repo.save).toHaveBeenCalledWith(expect.objectContaining({
@@ -36,6 +36,34 @@ describe('HistoryPage', () => {
       exercises: [{ exerciseId: 'squat', order: 0, sets: [{ weight: 105, reps: 8 }] }]
     })));
     expect(await screen.findByText('Тренировка обновлена')).toBeInTheDocument();
+  });
+
+  it('does not save semantically invalid set values', async () => {
+    const repo = repository();
+    render(<HistoryPage workouts={[workout]} repository={repo} exercises={[exercise]} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Открыть тренировку Свободная тренировка' }));
+    fireEvent.change(screen.getByLabelText('Повторы подхода 1 для Приседания'), { target: { value: '7.5' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Сохранить изменения' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Количество повторений');
+    expect(repo.save).not.toHaveBeenCalled();
+  });
+
+  it('shows exercise names and a safe fallback instead of internal ids', () => {
+    const repo = repository();
+    const missingExerciseWorkout: Workout = {
+      ...workout,
+      id: 'missing-exercise',
+      exercises: [{ exerciseId: 'removed-id', order: 0, sets: [{}] }]
+    };
+    render(<HistoryPage workouts={[workout, missingExerciseWorkout]} repository={repo} exercises={[exercise]} />);
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Открыть тренировку Свободная тренировка' })[0]);
+    expect(screen.getByRole('heading', { name: 'Приседания' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Назад' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Открыть тренировку Свободная тренировка' })[1]);
+    expect(screen.getByRole('heading', { name: 'Удалённое упражнение' })).toBeInTheDocument();
+    expect(screen.queryByText('removed-id')).not.toBeInTheDocument();
   });
 
   it('does not remove a workout when confirmation is declined', async () => {
@@ -71,8 +99,8 @@ describe('HistoryPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Открыть тренировку Свободная тренировка' }));
     fireEvent.change(screen.getByLabelText('Новое упражнение'), { target: { value: 'bench' } });
     fireEvent.click(screen.getByRole('button', { name: 'Добавить упражнение' }));
-    expect(screen.getByText('bench')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Удалить упражнение bench' }));
-    expect(screen.queryByText('bench')).not.toBeInTheDocument();
+    expect(screen.getByText('Жим лёжа')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Удалить упражнение Жим лёжа' }));
+    expect(screen.queryByRole('heading', { name: 'Жим лёжа' })).not.toBeInTheDocument();
   });
 });

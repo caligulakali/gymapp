@@ -15,10 +15,11 @@ export const dataTransferRepository: DataTransferRepositoryPort = {
 
   async replaceData(data: ExportData): Promise<void> {
     const database = getDatabase();
-    await database.transaction('rw', database.exercises, database.templates, database.workouts, async () => {
+    await database.transaction('rw', database.exercises, database.templates, database.workouts, database.drafts, async () => {
       await database.exercises.clear();
       await database.templates.clear();
       await database.workouts.clear();
+      await database.drafts.clear();
       await database.exercises.bulkPut(data.exercises);
       await database.templates.bulkPut(data.templates);
       await database.workouts.bulkPut(data.workouts);
