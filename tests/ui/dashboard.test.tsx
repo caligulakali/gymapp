@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { App } from '../../src/ui/app';
 
@@ -9,21 +9,15 @@ const repositories = {
 };
 
 describe('dashboard shell', () => {
-  it('shows the dashboard with a quick-start action and summary cards', async () => {
+  it('shows an honest dashboard without deferred analytics placeholders', async () => {
     render(<App {...repositories} />);
 
     expect(screen.getByRole('heading', { name: 'Обзор' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Начать тренировку' })).toBeInTheDocument();
-    expect(screen.getByText('Тренировки')).toBeInTheDocument();
-    expect(screen.getByText('Объём за неделю')).toBeInTheDocument();
-  });
-
-  it('switches to progress without losing the app shell', () => {
-    render(<App {...repositories} />);
-
-    fireEvent.click(within(screen.getByRole('navigation', { name: 'Основная навигация' })).getByRole('button', { name: 'Прогресс' }));
-
-    expect(screen.getByRole('heading', { name: 'Прогресс' })).toBeInTheDocument();
-    expect(screen.getByRole('navigation', { name: 'Основная навигация' })).toBeInTheDocument();
+    expect(screen.queryByText('Регулярность')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Профиль' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Прогресс' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Понедельник, 17 августа')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Подробнее' })).not.toBeInTheDocument();
   });
 });

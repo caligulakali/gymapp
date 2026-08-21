@@ -11,6 +11,24 @@ const template: Template = {
 };
 
 describe('WorkoutPage', () => {
+  it('shows a safe fallback when a template references a removed exercise', async () => {
+    const missingExerciseTemplate: Template = {
+      ...template,
+      exercises: [{ exerciseId: 'internal-removed-id', order: 0, sets: 1 }]
+    };
+    render(<WorkoutPage
+      workoutRepository={{ getAll: vi.fn().mockResolvedValue([]), save: vi.fn(), getById: vi.fn(), remove: vi.fn() }}
+      templateRepository={{ getAll: vi.fn().mockResolvedValue([missingExerciseTemplate]), save: vi.fn(), getById: vi.fn(), remove: vi.fn() }}
+      exerciseRepository={{ getAll: vi.fn().mockResolvedValue([]), save: vi.fn(), getById: vi.fn(), remove: vi.fn() }}
+      createId={() => 'workout-missing'}
+      now={() => '2026-08-17T12:00:00.000Z'}
+    />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Начать тренировку по шаблону Ноги' }));
+    expect(await screen.findByRole('heading', { name: 'Удалённое упражнение' })).toBeInTheDocument();
+    expect(screen.queryByText('internal-removed-id')).not.toBeInTheDocument();
+  });
+
   it('starts a workout from a template and saves recorded set values', async () => {
     const workoutRepository = { getAll: vi.fn().mockResolvedValue([]), save: vi.fn().mockResolvedValue(undefined), getById: vi.fn(), remove: vi.fn() };
     render(<WorkoutPage

@@ -16,6 +16,7 @@ describe('WorkoutPage draft', () => {
     const repos = repositories();
     render(<WorkoutPage {...repos} createId={() => 'draft-1'} now={() => '2026-08-18T10:00:00.000Z'} />);
     fireEvent.click(await screen.findByRole('button', { name: /Пустая тренировка/ }));
+    expect(screen.queryByText(/00:00/)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Добавить Приседания' }));
     fireEvent.change(screen.getByLabelText('Повторы подхода 1 для Приседания'), { target: { value: '8' } });
 
@@ -59,6 +60,36 @@ describe('WorkoutPage draft', () => {
     expect(repos.draftRepository.clearDraft).not.toHaveBeenCalled();
     releaseSave();
     await waitFor(() => expect(repos.draftRepository.clearDraft).toHaveBeenCalled());
+  });
+
+  it('saves the last edited value when completion follows the input immediately', async () => {
+    const repos = repositories();
+    render(<WorkoutPage {...repos} createId={() => 'draft-1'} now={() => '2026-08-18T10:00:00.000Z'} />);
+    fireEvent.click(await screen.findByRole('button', { name: /Пустая тренировка/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Добавить Приседания' }));
+
+    fireEvent.change(screen.getByLabelText('Повторы подхода 1 для Приседания'), { target: { value: '9' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Завершить и сохранить тренировку' }));
+
+    await waitFor(() => expect(repos.workoutRepository.save).toHaveBeenCalledWith(expect.objectContaining({
+      exercises: [{ exerciseId: 'squat', order: 0, sets: [{ reps: 9 }] }]
+    })));
+  });
+
+  it('waits for pending writes before clearing a discarded draft', async () => {
+    const repos = repositories();
+    let releaseSave!: () => void;
+    repos.draftRepository.saveDraft.mockImplementation(() => new Promise<void>((resolve) => { releaseSave = resolve; }));
+    render(<WorkoutPage {...repos} createId={() => 'draft-1'} now={() => '2026-08-18T10:00:00.000Z'} confirmDiscard={() => true} />);
+    fireEvent.click(await screen.findByRole('button', { name: /Пустая тренировка/ }));
+    await waitFor(() => expect(repos.draftRepository.saveDraft).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Отменить черновик' }));
+    expect(repos.draftRepository.clearDraft).not.toHaveBeenCalled();
+    releaseSave();
+
+    await waitFor(() => expect(repos.draftRepository.clearDraft).toHaveBeenCalled());
+    expect(screen.getByRole('heading', { name: 'Начать тренировку' })).toBeInTheDocument();
   });
 
   it('rejects a malformed stored draft and removes it', async () => {
