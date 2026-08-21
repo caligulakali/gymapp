@@ -92,6 +92,29 @@ describe('WorkoutPage draft', () => {
     expect(screen.getByRole('heading', { name: 'Начать тренировку' })).toBeInTheDocument();
   });
 
+  it('does not enqueue edits made after draft discard starts', async () => {
+    const repos = repositories();
+    let releaseSave!: () => void;
+    repos.draftRepository.saveDraft
+      .mockImplementationOnce(() => new Promise<void>((resolve) => { releaseSave = resolve; }))
+      .mockResolvedValue(undefined);
+    render(<WorkoutPage {...repos} createId={() => 'draft-1'} now={() => '2026-08-18T10:00:00.000Z'} confirmDiscard={() => true} />);
+    fireEvent.click(await screen.findByRole('button', { name: /Пустая тренировка/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Добавить Приседания' }));
+    const repsInput = screen.getByLabelText('Повторы подхода 1 для Приседания');
+    await waitFor(() => expect(repos.draftRepository.saveDraft).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Отменить черновик' }));
+    fireEvent.change(repsInput, { target: { value: '12' } });
+    releaseSave();
+
+    await waitFor(() => expect(repos.draftRepository.clearDraft).toHaveBeenCalled());
+    await waitFor(() => expect(repos.draftRepository.saveDraft).toHaveBeenCalledTimes(2));
+    expect(repos.draftRepository.saveDraft).not.toHaveBeenCalledWith(expect.objectContaining({
+      exercises: [{ exerciseId: 'squat', order: 0, sets: [{ reps: 12 }] }]
+    }));
+  });
+
   it('rejects a malformed stored draft and removes it', async () => {
     const repos = repositories();
     repos.draftRepository.getDraft.mockResolvedValue({ id: 'broken', date: 'not-a-date', exercises: [] });

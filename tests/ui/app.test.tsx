@@ -98,4 +98,27 @@ describe('App', () => {
     expect(exerciseRepository.getAll).toHaveBeenCalledTimes(2);
     expect(templateRepository.getAll).toHaveBeenCalledTimes(2);
   });
+
+  it('refreshes the shared exercise catalogue after deletion', async () => {
+    const exercise = { id: 'squat', name: 'Приседания', muscleGroup: 'legs' as const, type: 'strength' as const, unit: 'kg' as const, favourite: false };
+    const workout = { id: 'workout-1', date: '2026-08-18T10:00:00.000Z', exercises: [{ exerciseId: 'squat', order: 0, sets: [{}] }] };
+    let deleted = false;
+    const exerciseRepository = {
+      getAll: vi.fn().mockImplementation(() => Promise.resolve(deleted ? [] : [exercise])),
+      save: vi.fn(),
+      remove: vi.fn().mockImplementation(async () => { deleted = true; })
+    };
+    const workoutRepository = { getAll: vi.fn().mockResolvedValue([workout]), save: vi.fn(), getById: vi.fn(), remove: vi.fn() };
+    const templateRepository = { getAll: vi.fn().mockResolvedValue([]), save: vi.fn(), remove: vi.fn() };
+    render(<App exerciseRepository={exerciseRepository} templateRepository={templateRepository} workoutRepository={workoutRepository} />);
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Основная навигация' })).getByRole('button', { name: 'Упражнения' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Удалить Приседания' }));
+    await waitFor(() => expect(exerciseRepository.remove).toHaveBeenCalledWith('squat'));
+    await waitFor(() => expect(exerciseRepository.getAll).toHaveBeenCalledTimes(3));
+
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Основная навигация' })).getByRole('button', { name: 'История' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Открыть тренировку Свободная тренировка' }));
+    expect(screen.getByRole('heading', { name: 'Удалённое упражнение' })).toBeInTheDocument();
+  });
 });
