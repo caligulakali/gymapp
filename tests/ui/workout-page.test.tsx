@@ -6,11 +6,47 @@ import { WorkoutPage } from '../../src/ui/workouts/workout-page';
 const exercise: Exercise = {
   id: 'exercise-1', name: 'Приседания', muscleGroup: 'legs', type: 'strength', unit: 'kg', favourite: false
 };
+const secondExercise: Exercise = {
+  id: 'exercise-2', name: 'Жим лёжа', muscleGroup: 'chest', type: 'strength', unit: 'kg', favourite: false
+};
 const template: Template = {
   id: 'template-1', name: 'Ноги', exercises: [{ exerciseId: 'exercise-1', order: 0, sets: 2, targetReps: 8, targetWeight: 100 }]
 };
 
 describe('WorkoutPage', () => {
+  it('keeps one exercise in focus without losing collapsed values', async () => {
+    const focusedTemplate: Template = {
+      ...template,
+      exercises: [
+        { exerciseId: 'exercise-1', order: 0, sets: 1, targetReps: 8, targetWeight: 100 },
+        { exerciseId: 'exercise-2', order: 1, sets: 1, targetReps: 10, targetWeight: 60 }
+      ]
+    };
+    render(<WorkoutPage
+      workoutRepository={{ getAll: vi.fn().mockResolvedValue([]), save: vi.fn(), getById: vi.fn(), remove: vi.fn() }}
+      templateRepository={{ getAll: vi.fn().mockResolvedValue([focusedTemplate]), save: vi.fn(), getById: vi.fn(), remove: vi.fn() }}
+      exerciseRepository={{ getAll: vi.fn().mockResolvedValue([exercise, secondExercise]), save: vi.fn(), getById: vi.fn(), remove: vi.fn() }}
+      createId={() => 'workout-focused'}
+      now={() => '2026-08-17T12:00:00.000Z'}
+    />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Начать тренировку по шаблону Ноги' }));
+    const firstToggle = await screen.findByRole('button', { name: 'Свернуть Приседания' });
+    const secondToggle = screen.getByRole('button', { name: 'Развернуть Жим лёжа' });
+    expect(firstToggle).toHaveAttribute('aria-expanded', 'true');
+    expect(secondToggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByLabelText('Повторы подхода 1 для Приседания')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Повторы подхода 1 для Жим лёжа')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Завершить и сохранить тренировку' })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Повторы подхода 1 для Приседания'), { target: { value: '12' } });
+    fireEvent.click(firstToggle);
+    fireEvent.click(screen.getByRole('button', { name: 'Развернуть Жим лёжа' }));
+    expect(screen.getByLabelText('Повторы подхода 1 для Жим лёжа')).toHaveValue(10);
+    fireEvent.click(screen.getByRole('button', { name: 'Развернуть Приседания' }));
+    expect(screen.getByLabelText('Повторы подхода 1 для Приседания')).toHaveValue(12);
+  });
+
   it('shows a safe fallback when a template references a removed exercise', async () => {
     const missingExerciseTemplate: Template = {
       ...template,
