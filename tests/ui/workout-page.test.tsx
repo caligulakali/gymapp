@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { Exercise, Template } from '../../src/db/entities';
 import { WorkoutPage } from '../../src/ui/workouts/workout-page';
@@ -36,13 +36,23 @@ describe('WorkoutPage', () => {
     expect(firstToggle).toHaveAttribute('aria-expanded', 'true');
     expect(secondToggle).toHaveAttribute('aria-expanded', 'false');
     expect(screen.getByLabelText('Повторы подхода 1 для Приседания')).toBeInTheDocument();
-    expect(screen.queryByLabelText('Повторы подхода 1 для Жим лёжа')).not.toBeInTheDocument();
+    const secondPanelId = secondToggle.getAttribute('aria-controls');
+    expect(secondPanelId).toBeTruthy();
+    const secondPanel = document.getElementById(secondPanelId!);
+    expect(secondPanel).toBeInTheDocument();
+    expect(secondPanel).toHaveAttribute('hidden');
+    expect(screen.queryByRole('spinbutton', { name: 'Повторы подхода 1 для Жим лёжа' })).not.toBeInTheDocument();
+    expect(within(secondPanel!).getByRole('spinbutton', { name: 'Повторы подхода 1 для Жим лёжа', hidden: true })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Завершить и сохранить тренировку' })).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('Повторы подхода 1 для Приседания'), { target: { value: '12' } });
     fireEvent.click(firstToggle);
     fireEvent.click(screen.getByRole('button', { name: 'Развернуть Жим лёжа' }));
+    expect(secondPanel).not.toHaveAttribute('hidden');
     expect(screen.getByLabelText('Повторы подхода 1 для Жим лёжа')).toHaveValue(10);
+    fireEvent.click(screen.getByRole('button', { name: 'Свернуть Жим лёжа' }));
+    expect(document.getElementById(secondPanelId!)).toBe(secondPanel);
+    expect(secondPanel).toHaveAttribute('hidden');
     fireEvent.click(screen.getByRole('button', { name: 'Развернуть Приседания' }));
     expect(screen.getByLabelText('Повторы подхода 1 для Приседания')).toHaveValue(12);
   });

@@ -12,6 +12,32 @@ const repositories = () => ({
 });
 
 describe('WorkoutPage draft', () => {
+  it('reports a pending draft write and confirms it only after persistence succeeds', async () => {
+    const repos = repositories();
+    let releaseSave!: () => void;
+    repos.draftRepository.saveDraft.mockImplementation(() => new Promise<void>((resolve) => { releaseSave = resolve; }));
+    render(<WorkoutPage {...repos} createId={() => 'draft-status'} now={() => '2026-08-18T10:00:00.000Z'} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /Пустая тренировка/ }));
+    await waitFor(() => expect(repos.draftRepository.saveDraft).toHaveBeenCalled());
+    expect(screen.getByRole('status')).toHaveTextContent('Сохраняем…');
+    expect(screen.queryByText('Черновик сохранён')).not.toBeInTheDocument();
+
+    releaseSave();
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Черновик сохранён'));
+    expect(screen.queryByText('Сохраняем…')).not.toBeInTheDocument();
+  });
+
+  it('warns when draft persistence fails without claiming it was saved', async () => {
+    const repos = repositories();
+    repos.draftRepository.saveDraft.mockRejectedValueOnce(new Error('storage unavailable'));
+    render(<WorkoutPage {...repos} createId={() => 'draft-error'} now={() => '2026-08-18T10:00:00.000Z'} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /Пустая тренировка/ }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Не удалось сохранить черновик');
+    expect(screen.queryByText('Черновик сохранён')).not.toBeInTheDocument();
+  });
+
   it('saves the active workout draft as values change', async () => {
     const repos = repositories();
     render(<WorkoutPage {...repos} createId={() => 'draft-1'} now={() => '2026-08-18T10:00:00.000Z'} />);
