@@ -134,7 +134,10 @@ export function importGymApp(input: string): ExportData {
 }
 
 function csvCell(value: unknown): string {
-  const text = value === undefined || value === null ? '' : String(value);
+  const rawText = value === undefined || value === null ? '' : String(value);
+  const text = typeof value === 'string'
+    ? rawText.replace(/^([\u0000-\u0020\u007f-\u009f\uFEFF]*)(?=[=+@-])/u, "$1'")
+    : rawText;
   return /[",\n\r]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 }
 

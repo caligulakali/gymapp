@@ -59,6 +59,26 @@ describe('data transfer service', () => {
     expect(csv).toContain('workout-1,2026-08-18T10:00:00.000Z,legs-day,squat,0,1,100,8,,,90,Хорошая техника');
   });
 
+  it.each([
+    '=HYPERLINK("https://example.invalid","x")',
+    '+SUM(1,2)',
+    '-SUM(1,2)',
+    '@SUM(1,2)',
+    ' \t=SUM(1,2)',
+    '\uFEFF@SUM(1,2)'
+  ])('neutralizes formula-like text in CSV: %s', (name) => {
+    const csv = exportCsv({
+      ...data,
+      exercises: [{ ...exercises[0], name }],
+      workouts: [{ ...workouts[0], exercises: [{ ...workouts[0].exercises[0], sets: [{ weight: -1 }] }] }]
+    });
+
+    const safeName = name.replace(/^([\u0000-\u0020\u007f-\u009f\uFEFF]*)(?=[=+@-])/u, "$1'");
+    const encodedName = `"${safeName.replaceAll('"', '""')}"`;
+    expect(csv).toContain(encodedName);
+    expect(csv).toContain('workout-1,2026-08-18T10:00:00.000Z,legs-day,squat,0,1,-1');
+  });
+
   it('rejects malformed, unsupported, and duplicate data', () => {
     expect(() => importGymApp('{"format":"other","version":1}')).toThrow('формат');
     expect(() => importGymApp(JSON.stringify({ format: 'gymapp', version: 2, exercises: [], templates: [], workouts: [] }))).toThrow('версия');
