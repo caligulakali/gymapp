@@ -10,10 +10,12 @@ export type MuscleGroup =
   | 'cardio';
 export type ExerciseType = 'strength' | 'cardio' | 'time' | 'reps';
 export type WeightUnit = 'kg';
+export type Equipment = 'bodyweight' | 'dumbbells' | 'barbell' | 'machine' | 'cable' | 'kettlebell' | 'other';
 
 export interface Exercise {
   id: string;
   name: string;
+  equipment?: Equipment;
   muscleGroup: MuscleGroup;
   type: ExerciseType;
   unit: WeightUnit;

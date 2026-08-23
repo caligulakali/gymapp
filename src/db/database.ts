@@ -37,6 +37,18 @@ export class GymAppDatabase extends Dexie {
       workouts: 'id, date, templateId',
       drafts: 'id'
     });
+    this.version(6)
+      .stores({
+        exercises: 'id, name, muscleGroup, type, favourite',
+        templates: 'id, name',
+        workouts: 'id, date, templateId',
+        drafts: 'id'
+      })
+      .upgrade(async (transaction) => {
+        await transaction.table('exercises').toCollection().modify((record: Partial<Exercise>) => {
+          record.equipment ??= 'other';
+        });
+      });
   }
 }
 

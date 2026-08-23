@@ -1,4 +1,4 @@
-import type { Exercise, ExerciseType, Template, TemplateExercise, WeightUnit, Workout, WorkoutExercise, WorkoutSet } from '../db/entities';
+import type { Equipment, Exercise, ExerciseType, Template, TemplateExercise, WeightUnit, Workout, WorkoutExercise, WorkoutSet } from '../db/entities';
 
 export interface ExportData {
   exercises: Exercise[];
@@ -14,6 +14,7 @@ interface GymAppFile extends ExportData {
 
 const EXERCISE_TYPES: readonly ExerciseType[] = ['strength', 'cardio', 'time', 'reps'];
 const WEIGHT_UNITS: readonly WeightUnit[] = ['kg'];
+const EQUIPMENT_TYPES: readonly Equipment[] = ['bodyweight', 'dumbbells', 'barbell', 'machine', 'cable', 'kettlebell', 'other'];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -42,6 +43,7 @@ function validateExercise(value: unknown): value is Exercise {
   if (typeof value.muscleGroup !== 'string' || value.muscleGroup.trim() === '') throw new Error('Упражнение имеет неверную мышечную группу');
   if (!EXERCISE_TYPES.includes(value.type as ExerciseType)) throw new Error('Упражнение имеет неверный тип');
   if (!WEIGHT_UNITS.includes(value.unit as WeightUnit)) throw new Error('Упражнение имеет неверную единицу веса');
+  if ('equipment' in value && typeof value.equipment !== 'undefined' && !EQUIPMENT_TYPES.includes(value.equipment as Equipment)) throw new Error('Упражнение имеет неверный снаряд');
   if (typeof value.favourite !== 'boolean') throw new Error('Признак избранного упражнения указан неверно');
   if ('notes' in value && typeof value.notes !== 'undefined' && typeof value.notes !== 'string') throw new Error('Заметка упражнения указана неверно');
   return true;
@@ -147,9 +149,9 @@ export function exportCsv(data: ExportData): string {
       ].map(csvCell).join(',')));
     }
   }
-  lines.push('', 'exerciseId,name,muscleGroup,type,unit,favourite,notes');
+  lines.push('', 'exerciseId,name,equipment,muscleGroup,type,unit,favourite,notes');
   for (const exercise of data.exercises) {
-    lines.push([exercise.id, exercise.name, exercise.muscleGroup, exercise.type, exercise.unit, exercise.favourite, exercise.notes].map(csvCell).join(','));
+    lines.push([exercise.id, exercise.name, exercise.equipment, exercise.muscleGroup, exercise.type, exercise.unit, exercise.favourite, exercise.notes].map(csvCell).join(','));
   }
   return lines.join('\n');
 }
