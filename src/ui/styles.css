@@ -398,14 +398,24 @@ textarea { min-height: 90px; resize: vertical; } select { appearance: none; back
 
 /* Active workouts only show metrics relevant to the exercise type. */
 .active-set-grid { display: grid; align-items: center; gap: 8px; }
-.active-set-grid.set-grid-1 { grid-template-columns: 40px minmax(100px,1fr) 32px; }
-.active-set-grid.set-grid-2 { grid-template-columns: 40px repeat(2,minmax(100px,1fr)) 32px; }
+.active-set-grid.set-grid-1 { grid-template-columns: 40px minmax(100px,1fr) 74px; }
+.active-set-grid.set-grid-2 { grid-template-columns: 40px repeat(2,minmax(100px,1fr)) 74px; }
 .focused-workout-card .active-set-grid.set-header { padding: 0 0 8px; }
 .focused-workout-card .active-set-grid.set-row { margin-bottom: 7px; }
+.focused-workout-card .active-set-grid.set-row.is-complete { border-radius: 10px; background: rgba(82,214,162,.045); }
+.focused-workout-card .active-set-grid.set-row.is-complete input { border-color: rgba(82,214,162,.2); }
+.set-actions { display: flex; justify-content: flex-end; gap: 5px; }
+.set-complete,.set-delete { display: grid; width: 32px; height: 32px; place-items: center; border: 1px solid var(--line); border-radius: 9px; background: rgba(255,255,255,.025); }
+.set-complete { color: #707a90; font-weight: 850; }
+.set-complete:hover { border-color: rgba(82,214,162,.28); color: var(--success); background: rgba(82,214,162,.07); }
+.set-complete.is-complete { border-color: transparent; color: #07160f; background: var(--success); box-shadow: 0 5px 16px rgba(82,214,162,.2); }
+.set-delete { color: #707a90; }
+.set-delete:hover { color: var(--danger); background: rgba(255,90,112,.08); }
 
 .workout-rest-timer { position: sticky; bottom: 92px; z-index: 13; display: grid; grid-template-columns: minmax(150px,1fr) auto auto; align-items: center; gap: 16px; margin-top: 12px; padding: 11px 12px; border: 1px solid rgba(124,142,255,.2); border-radius: 16px; background: rgba(12,16,28,.94); box-shadow: 0 18px 50px rgba(0,0,0,.32); backdrop-filter: blur(22px); }
 .workout-rest-timer.is-running { border-color: rgba(82,214,162,.24); }
 .workout-rest-timer.is-finished { border-color: rgba(168,112,255,.36); box-shadow: 0 18px 50px rgba(69,45,152,.2); }
+.workout-rest-timer.is-disabled { border-style: dashed; opacity: .82; }
 .rest-timer-copy { display: flex; min-width: 0; align-items: center; gap: 10px; }
 .rest-timer-icon { display: grid; width: 35px; height: 35px; flex: 0 0 35px; place-items: center; border-radius: 11px; color: var(--accent-light); background: rgba(95,124,255,.1); font-size: 1rem; }
 .workout-rest-timer.is-running .rest-timer-icon { color: var(--success); background: rgba(82,214,162,.09); }
@@ -420,8 +430,8 @@ textarea { min-height: 90px; resize: vertical; } select { appearance: none; back
 @media (max-width: 760px) {
   .rest-setting-controls { grid-template-columns: 1fr; }
   .rest-presets { display: grid; grid-template-columns: repeat(3,1fr); }
-  .active-set-grid.set-grid-1 { grid-template-columns: 28px minmax(0,1fr) 28px; }
-  .active-set-grid.set-grid-2 { grid-template-columns: 28px repeat(2,minmax(0,1fr)) 28px; }
+  .active-set-grid.set-grid-1 { grid-template-columns: 28px minmax(0,1fr) 68px; }
+  .active-set-grid.set-grid-2 { grid-template-columns: 28px repeat(2,minmax(0,1fr)) 68px; }
   .workout-page .active-set-grid input:nth-of-type(n+1) { display: block; }
   .workout-rest-timer { bottom: calc(140px + env(safe-area-inset-bottom)); grid-template-columns: minmax(0,1fr) auto; gap: 8px; padding: 9px; }
   .workout-rest-timer time { min-width: 70px; font-size: 1.45rem; }

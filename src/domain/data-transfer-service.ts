@@ -34,6 +34,9 @@ function validateSet(value: unknown): value is WorkoutSet {
   for (const field of ['weight', 'reps', 'time', 'distance', 'rest'] as const) {
     if (field in value && !isFiniteNumber(value[field])) throw new Error(`Поле ${field} в подходе указано неверно`);
   }
+  if ('completed' in value && typeof value.completed !== 'undefined' && typeof value.completed !== 'boolean') {
+    throw new Error('Отметка выполнения подхода указана неверно');
+  }
   return true;
 }
 
@@ -145,12 +148,12 @@ function csvCell(value: unknown): string {
 
 export function exportCsv(data: ExportData): string {
   validateExportData(data);
-  const lines = ['workoutId,date,templateId,exerciseId,order,set,weight,reps,time,distance,rest,notes'];
+  const lines = ['workoutId,date,templateId,exerciseId,order,set,weight,reps,time,distance,rest,notes,completed'];
   for (const workout of data.workouts) {
     for (const exercise of workout.exercises) {
       exercise.sets.forEach((set, index) => lines.push([
         workout.id, workout.date, workout.templateId, exercise.exerciseId, exercise.order, index + 1,
-        set.weight, set.reps, set.time, set.distance, set.rest, workout.notes
+        set.weight, set.reps, set.time, set.distance, set.rest, workout.notes, set.completed
       ].map(csvCell).join(',')));
     }
   }

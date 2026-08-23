@@ -95,6 +95,10 @@ describe('WorkoutPage', () => {
     expect(screen.getByLabelText('Вес подхода 1 для Приседания')).toHaveValue(100);
     fireEvent.change(screen.getByLabelText('Повторы подхода 1 для Приседания'), { target: { value: '10' } });
     fireEvent.change(screen.getByLabelText('Вес подхода 1 для Приседания'), { target: { value: '105' } });
+    const completion = screen.getByRole('button', { name: 'Отметить подход 1 для Приседания выполненным' });
+    expect(completion).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(completion);
+    expect(completion).toHaveAttribute('aria-pressed', 'true');
     expect(screen.queryByLabelText('Время подхода 1 для Приседания')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Расстояние подхода 1 для Приседания')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Отдых после подхода 1 для Приседания')).not.toBeInTheDocument();
@@ -104,7 +108,7 @@ describe('WorkoutPage', () => {
     await waitFor(() => expect(workoutRepository.save).toHaveBeenCalledWith(expect.objectContaining({
       id: 'workout-1', templateId: 'template-1', date: '2026-08-17T12:00:00.000Z',
       notes: 'Техника стала лучше',
-      exercises: [expect.objectContaining({ sets: [{ reps: 10, weight: 105 }, { reps: 8, weight: 100 }] })]
+      exercises: [expect.objectContaining({ sets: [{ reps: 10, weight: 105, completed: true }, { reps: 8, weight: 100 }] })]
     })));
     expect(await screen.findByText('Тренировка сохранена')).toBeInTheDocument();
   });
@@ -184,10 +188,18 @@ describe('WorkoutPage', () => {
     const timer = await screen.findByRole('region', { name: 'Таймер отдыха' });
     expect(timer).toHaveTextContent('01:30');
     vi.useFakeTimers();
-    fireEvent.click(within(timer).getByRole('button', { name: 'Запустить таймер отдыха' }));
+    const completion = screen.getByRole('button', { name: 'Отметить подход 1 для Приседания выполненным' });
+    fireEvent.click(completion);
+    expect(completion).toHaveAttribute('aria-pressed', 'true');
+    expect(within(timer).getByRole('button', { name: 'Приостановить таймер отдыха' })).toBeInTheDocument();
 
     await act(async () => { vi.advanceTimersByTime(1000); });
     expect(timer).toHaveTextContent('01:29');
+    fireEvent.click(completion);
+    expect(completion).toHaveAttribute('aria-pressed', 'false');
+    expect(within(timer).getByRole('button', { name: 'Приостановить таймер отдыха' })).toBeInTheDocument();
+    fireEvent.click(completion);
+    expect(timer).toHaveTextContent('01:30');
     await act(async () => { vi.advanceTimersByTime(100_000); });
     expect(timer).toHaveTextContent('00:00');
     expect(timer).not.toHaveTextContent('-');
@@ -205,7 +217,13 @@ describe('WorkoutPage', () => {
     />);
 
     fireEvent.click(await screen.findByRole('button', { name: 'Начать тренировку по шаблону Ноги' }));
-    expect(screen.queryByRole('region', { name: 'Таймер отдыха' })).not.toBeInTheDocument();
+    const timer = screen.getByRole('region', { name: 'Таймер отдыха' });
+    expect(timer).toHaveTextContent('Таймер не настроен');
+    expect(timer).toHaveTextContent('--:--');
+    const completion = screen.getByRole('button', { name: 'Отметить подход 1 для Приседания выполненным' });
+    fireEvent.click(completion);
+    expect(completion).toHaveAttribute('aria-pressed', 'true');
+    expect(timer).toHaveTextContent('Таймер не настроен');
   });
 
   it('keeps timer controls bound to the displayed exercise after focus changes', async () => {

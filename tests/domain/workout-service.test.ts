@@ -71,12 +71,12 @@ describe('workout service', () => {
     expect(createWorkout({
       date: '2026-08-17T12:00:00.000Z',
       notes: '  Кардио  ',
-      exercises: [{ exerciseId: 'run', order: 0, sets: [{ time: 900, distance: 2.5 }] }]
+      exercises: [{ exerciseId: 'run', order: 0, sets: [{ time: 900, distance: 2.5, completed: true }] }]
     }, 'workout-2')).toEqual({
       id: 'workout-2',
       date: '2026-08-17T12:00:00.000Z',
       notes: 'Кардио',
-      exercises: [{ exerciseId: 'run', order: 0, sets: [{ time: 900, distance: 2.5 }] }]
+      exercises: [{ exerciseId: 'run', order: 0, sets: [{ time: 900, distance: 2.5, completed: true }] }]
     });
   });
 
@@ -84,7 +84,7 @@ describe('workout service', () => {
     const validDraft = {
       date: '2026-08-17T12:00:00.000Z',
       notes: '  Хорошая тренировка  ',
-      exercises: [{ exerciseId: 'squat', order: 0, sets: [{ reps: 8, weight: 100, rest: 120, time: 60, distance: 1.5 }] }]
+      exercises: [{ exerciseId: 'squat', order: 0, sets: [{ reps: 8, weight: 100, rest: 120, time: 60, distance: 1.5, completed: false }] }]
     };
 
     expect(validateWorkoutDraft(validDraft)).toEqual([]);
@@ -95,6 +95,10 @@ describe('workout service', () => {
       'Дата тренировки должна быть корректной ISO-датой'
     );
     expect(validateWorkoutDraft({ ...validDraft, exercises: [] })).toEqual([]);
+    expect(validateWorkoutDraft({
+      ...validDraft,
+      exercises: [{ exerciseId: 'squat', order: 0, sets: [{ reps: 8, completed: 'true' as never }] }]
+    })).toContain('Отметка выполнения подхода указана неверно');
     expect(validateWorkoutDraft({
       ...validDraft,
       exercises: [{ exerciseId: 'squat', order: 0, sets: [{ reps: 0, weight: -1, rest: -10, time: 0.5, distance: -1 }] }]

@@ -32,7 +32,7 @@ const workouts: Workout[] = [{
   exercises: [{
     exerciseId: 'squat',
     order: 0,
-    sets: [{ weight: 100, reps: 8, rest: 90 }]
+    sets: [{ weight: 100, reps: 8, rest: 90, completed: true }]
   }]
 }];
 
@@ -56,6 +56,17 @@ describe('data transfer service', () => {
     expect(importGymApp(payload).exercises).toEqual([legacyExercise]);
   });
 
+  it('imports a legacy version 1 workout without a completion mark', () => {
+    const legacyWorkout = structuredClone(workouts[0]);
+    delete legacyWorkout.exercises[0].sets[0].completed;
+    const payload = JSON.stringify({
+      format: 'gymapp', version: 1, exportedAt: '2026-08-18T12:00:00.000Z',
+      exercises, templates, workouts: [legacyWorkout]
+    });
+
+    expect(importGymApp(payload).workouts).toEqual([legacyWorkout]);
+  });
+
   it('exports a complete JSON copy without mutating input', () => {
     const snapshot = structuredClone(data);
 
@@ -66,11 +77,11 @@ describe('data transfer service', () => {
   it('exports workout sets as escaped CSV rows', () => {
     const csv = exportCsv(data);
 
-    expect(csv).toContain('workoutId,date,templateId,exerciseId,order,set,weight,reps,time,distance,rest,notes');
+    expect(csv).toContain('workoutId,date,templateId,exerciseId,order,set,weight,reps,time,distance,rest,notes,completed');
     expect(csv).toContain('exerciseId,name,equipment,muscleGroup,type,unit,favourite,notes,restSeconds');
     expect(csv).toContain('squat,"\u041f\u0440\u0438\u0441\u0435\u0434, ""\u043a\u043b\u0430\u0441\u0441\u0438\u043a\u0430""",,legs,strength,kg,true,,90');
     expect(csv).toContain('"Присед, ""классика"""');
-    expect(csv).toContain('workout-1,2026-08-18T10:00:00.000Z,legs-day,squat,0,1,100,8,,,90,Хорошая техника');
+    expect(csv).toContain('workout-1,2026-08-18T10:00:00.000Z,legs-day,squat,0,1,100,8,,,90,Хорошая техника,true');
   });
 
   it.each([
@@ -106,5 +117,14 @@ describe('data transfer service', () => {
     });
 
     expect(() => importGymApp(payload)).toThrow('время отдыха');
+  });
+
+  it.each(['true', 0, null])('rejects an invalid imported completion mark: %s', (completed) => {
+    const payload = JSON.stringify({
+      format: 'gymapp', version: 1, exportedAt: '2026-08-18T12:00:00.000Z', exercises: [], templates: [],
+      workouts: [{ ...workouts[0], exercises: [{ ...workouts[0].exercises[0], sets: [{ completed }] }] }]
+    });
+
+    expect(() => importGymApp(payload)).toThrow('выполнения подхода');
   });
 });

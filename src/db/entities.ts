@@ -45,6 +45,7 @@ export interface WorkoutSet {
   time?: number;
   distance?: number;
   rest?: number;
+  completed?: boolean;
 }
 
 export interface WorkoutExercise {

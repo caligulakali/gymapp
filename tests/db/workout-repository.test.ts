@@ -10,7 +10,7 @@ const workout = {
   id: 'workout-1',
   templateId: 'template-1',
   date: '2026-08-17T12:00:00.000Z',
-  exercises: [{ exerciseId: 'exercise-1', order: 0, sets: [{ reps: 8, weight: 100 }] }]
+  exercises: [{ exerciseId: 'exercise-1', order: 0, sets: [{ reps: 8, weight: 100, completed: true }] }]
 };
 
 describe('workoutRepository', () => {

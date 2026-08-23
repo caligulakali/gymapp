@@ -20,7 +20,7 @@ type Props = {
 };
 
 type DraftSaveStatus = 'idle' | 'saving' | 'saved' | 'error';
-type SetMetric = Exclude<keyof WorkoutSet, 'rest'>;
+type SetMetric = 'weight' | 'reps' | 'time' | 'distance';
 type MetricField = { key: SetMetric; label: string; inputMode: 'decimal' | 'numeric'; placeholder: string; step?: string };
 type RestTimerState = { exerciseId: string; duration: number; remaining: number; running: boolean; endsAt?: number };
 
@@ -173,7 +173,7 @@ export function WorkoutPage({ workoutRepository, templateRepository, exerciseRep
     setExpandedExerciseId(exerciseId);
   }
 
-  function updateSet(exerciseIndex: number, setIndex: number, key: keyof WorkoutSet, value: string) {
+  function updateSet(exerciseIndex: number, setIndex: number, key: SetMetric, value: string) {
     if (!active) return;
     const parsedValue = value === '' ? undefined : Number(value);
     if (typeof parsedValue === 'number' && !Number.isFinite(parsedValue)) return;
@@ -191,6 +191,39 @@ export function WorkoutPage({ workoutRepository, templateRepository, exerciseRep
       })
     };
     updateActive(nextActive);
+  }
+
+  function runRestTimer(exercise?: Exercise): void {
+    if (!exercise || !isValidRestSeconds(exercise.restSeconds)) return;
+    setRestTimer({
+      exerciseId: exercise.id,
+      duration: exercise.restSeconds,
+      remaining: exercise.restSeconds,
+      running: true,
+      endsAt: Date.now() + exercise.restSeconds * 1000
+    });
+  }
+
+  function toggleSetCompletion(exerciseIndex: number, setIndex: number, exercise?: Exercise): void {
+    if (!active) return;
+    const currentSet = active.exercises[exerciseIndex]?.sets[setIndex];
+    if (!currentSet) return;
+    const completed = !Boolean(currentSet.completed);
+    const nextActive: Workout = {
+      ...active,
+      exercises: active.exercises.map((item, currentExerciseIndex) => currentExerciseIndex !== exerciseIndex ? item : {
+        ...item,
+        sets: item.sets.map((set, currentSetIndex) => {
+          if (currentSetIndex !== setIndex) return set;
+          if (completed) return { ...set, completed: true };
+          const nextSet = { ...set };
+          delete nextSet.completed;
+          return nextSet;
+        })
+      })
+    };
+    updateActive(nextActive);
+    if (completed) runRestTimer(exercise);
   }
 
   function startRestTimer(): void {
@@ -288,8 +321,8 @@ export function WorkoutPage({ workoutRepository, templateRepository, exerciseRep
           return <article className={`workout-card focused-workout-card${isExpanded ? ' is-expanded' : ''}`} key={item.exerciseId}>
             <div className="workout-card-heading"><div><span className="exercise-number">{String(exerciseIndex + 1).padStart(2, '0')}</span><span className="workout-card-title"><h2>{name}</h2><small>{item.sets.length} {pluralize(item.sets.length, ['подход', 'подхода', 'подходов'])}{exercise && ` · ${getMuscleGroupLabel(exercise.muscleGroup)}`}{exercise?.restSeconds && ` · отдых ${formatTimer(exercise.restSeconds)}`}</small></span></div><button className="workout-collapse" type="button" aria-label={`${isExpanded ? 'Свернуть' : 'Развернуть'} ${name}`} aria-expanded={isExpanded} aria-controls={panelId} onClick={() => setExpandedExerciseId(isExpanded ? undefined : item.exerciseId)}><span aria-hidden="true">⌄</span></button></div>
             <div className="workout-card-body" id={panelId} hidden={!isExpanded}>
-              <div className={`set-header active-set-grid ${metricClass}`}><span>№</span>{metricFields.map((field) => <span key={field.key}>{field.label}</span>)}<span /></div>
-              {item.sets.map((set, setIndex) => <div className={`set-row active-set-grid ${metricClass}`} key={setIndex}><span className="set-number">{setIndex + 1}</span>{metricFields.map((field) => <input key={field.key} aria-label={getMetricAriaLabel(field.key, setIndex + 1, name)} inputMode={field.inputMode} placeholder={field.placeholder} type="number" min="0" step={field.step} value={set[field.key] ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, field.key, event.target.value)} />)}<button className="set-check" type="button" aria-label={`Удалить подход ${setIndex + 1} для ${name}`} onClick={() => updateActive({ ...active, exercises: active.exercises.map((current, index) => index !== exerciseIndex ? current : { ...current, sets: current.sets.filter((_, currentSet) => currentSet !== setIndex) }) })}>×</button></div>)}
+              <div className={`set-header active-set-grid ${metricClass}`}><span>№</span>{metricFields.map((field) => <span key={field.key}>{field.label}</span>)}<span>Готово</span></div>
+              {item.sets.map((set, setIndex) => <div className={`set-row active-set-grid ${metricClass}${set.completed ? ' is-complete' : ''}`} key={setIndex}><span className="set-number">{setIndex + 1}</span>{metricFields.map((field) => <input key={field.key} aria-label={getMetricAriaLabel(field.key, setIndex + 1, name)} inputMode={field.inputMode} placeholder={field.placeholder} type="number" min="0" step={field.step} value={set[field.key] ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, field.key, event.target.value)} />)}<span className="set-actions"><button className={`set-complete${set.completed ? ' is-complete' : ''}`} type="button" aria-pressed={Boolean(set.completed)} aria-label={`Отметить подход ${setIndex + 1} для ${name} ${set.completed ? 'невыполненным' : 'выполненным'}`} onClick={() => toggleSetCompletion(exerciseIndex, setIndex, exercise)}><span aria-hidden="true">✓</span></button><button className="set-delete" type="button" aria-label={`Удалить подход ${setIndex + 1} для ${name}`} onClick={() => updateActive({ ...active, exercises: active.exercises.map((current, index) => index !== exerciseIndex ? current : { ...current, sets: current.sets.filter((_, currentSet) => currentSet !== setIndex) }) })}>×</button></span></div>)}
               <button className="add-set" type="button" onClick={() => updateActive({ ...active, exercises: active.exercises.map((current, index) => index !== exerciseIndex ? current : { ...current, sets: [...current.sets, emptySet()] }) })}>＋ Добавить подход</button>
             </div>
           </article>;
@@ -297,7 +330,7 @@ export function WorkoutPage({ workoutRepository, templateRepository, exerciseRep
         {availableExercises.length > 0 && <section className="add-exercise-row exercise-selector" aria-labelledby="exercise-selector-title"><div className="exercise-selector-heading"><div><p className="eyebrow">Следующий шаг</p><h2 id="exercise-selector-title">Добавить упражнение</h2></div><span>{availableExercises.length}</span></div><p>Выберите из своего справочника — новое упражнение сразу появится в тренировке.</p><div className="exercise-choice-grid">{availableExercises.map((exercise) => <button className="chip-button exercise-choice" type="button" key={exercise.id} aria-label={`Добавить ${exercise.name}`} onClick={() => addExercise(exercise.id)}><span className="exercise-choice-icon" aria-hidden="true">＋</span><span><strong>{exercise.name}</strong><small>{getMuscleGroupLabel(exercise.muscleGroup)}</small></span></button>)}</div></section>}
         {availableExercises.length === 0 && active.exercises.length === 0 && <section className="exercise-selector compact-empty-selector" aria-labelledby="exercise-selector-title"><div className="exercise-selector-heading"><div><p className="eyebrow">Нужен справочник</p><h2 id="exercise-selector-title">Нет доступных упражнений</h2></div></div><p>Добавь упражнения в справочник, затем вернись к тренировке.</p></section>}
         <label className="notes-field workout-notes">Заметки тренировки<textarea aria-label="Заметки тренировки" placeholder="Как прошла тренировка?" value={notes} onChange={(event) => { const nextNotes = event.target.value; setNotes(nextNotes); scheduleDraft(active, nextNotes); }} /></label>
-        {restTimer && <section className={`workout-rest-timer${restTimer.running ? ' is-running' : ''}${restTimer.remaining === 0 ? ' is-finished' : ''}`} role="region" aria-label="Таймер отдыха"><div className="rest-timer-copy"><span className="rest-timer-icon" aria-hidden="true">◷</span><span><small>{restTimer.remaining === 0 ? 'Отдых завершён' : 'Таймер отдыха'}</small><strong>{restTimerExercise?.name ?? 'Упражнение'}</strong></span></div><time aria-live="polite">{formatTimer(restTimer.remaining)}</time><div className="rest-timer-actions">{restTimer.running ? <button type="button" aria-label="Приостановить таймер отдыха" onClick={pauseRestTimer}>Пауза</button> : <button className="timer-primary" type="button" aria-label="Запустить таймер отдыха" onClick={startRestTimer}>{restTimer.remaining === 0 ? 'Ещё раз' : 'Старт'}</button>}<button type="button" aria-label="Сбросить таймер" onClick={resetRestTimer}>Сброс</button></div></section>}
+        <section className={`workout-rest-timer${restTimer?.running ? ' is-running' : ''}${restTimer?.remaining === 0 ? ' is-finished' : ''}${!restTimer ? ' is-disabled' : ''}`} role="region" aria-label="Таймер отдыха"><div className="rest-timer-copy"><span className="rest-timer-icon" aria-hidden="true">◷</span><span><small>{!restTimer ? 'Таймер не настроен' : restTimer.remaining === 0 ? 'Отдых завершён' : 'Таймер отдыха'}</small><strong>{restTimer ? restTimerExercise?.name ?? 'Упражнение' : 'Задай отдых в упражнении'}</strong></span></div><time aria-live="polite">{restTimer ? formatTimer(restTimer.remaining) : '--:--'}</time>{restTimer && <div className="rest-timer-actions">{restTimer.running ? <button type="button" aria-label="Приостановить таймер отдыха" onClick={pauseRestTimer}>Пауза</button> : <button className="timer-primary" type="button" aria-label="Запустить таймер отдыха" onClick={startRestTimer}>{restTimer.remaining === 0 ? 'Ещё раз' : 'Старт'}</button>}<button type="button" aria-label="Сбросить таймер" onClick={resetRestTimer}>Сброс</button></div>}</section>
         <div className="workout-finish-bar"><span><strong>Готово?</strong><small>Проверь подходы перед сохранением</small></span><button className="primary-submit" type="submit">Завершить и сохранить тренировку</button></div>{saved && <p className="saved-message">Тренировка сохранена</p>}
       </form>
     </section>

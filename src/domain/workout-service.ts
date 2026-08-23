@@ -39,6 +39,9 @@ function validateSet(value: unknown): string[] {
     if (typeof value.distance !== 'number' || !Number.isFinite(value.distance)) errors.push('Расстояние должно быть числом');
     else if (value.distance < 0) errors.push('Расстояние не может быть отрицательным');
   }
+  if (typeof value.completed !== 'undefined' && typeof value.completed !== 'boolean') {
+    errors.push('Отметка выполнения подхода указана неверно');
+  }
   return errors;
 }
 
