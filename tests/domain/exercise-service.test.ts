@@ -7,7 +7,8 @@ const draft = {
   muscleGroup: 'chest' as const,
   type: 'strength' as const,
   unit: 'kg' as const,
-  notes: '  Рабочий вес  '
+  notes: '  Рабочий вес  ',
+  restSeconds: 90
 };
 
 describe('exercise service', () => {
@@ -41,6 +42,16 @@ describe('exercise service', () => {
     );
   });
 
+  it.each([0, -1, 1.5, 3601, Number.MAX_SAFE_INTEGER + 1, 1e308, Number.NaN, Number.POSITIVE_INFINITY, '90'])('rejects an invalid optional rest duration: %s', (restSeconds) => {
+    expect(validateExerciseDraft({ ...draft, restSeconds: restSeconds as never })).toContain(
+      'Время отдыха должно быть целым числом от 1 до 3600 секунд'
+    );
+  });
+
+  it('keeps the rest duration optional', () => {
+    expect(createExercise({ ...draft, restSeconds: undefined }, 'exercise-1').restSeconds).toBeUndefined();
+  });
+
   it('accepts detailed muscle subgroups', () => {
     expect(validateExerciseDraft({ ...draft, muscleGroup: 'arms_biceps' })).toEqual([]);
     expect(createExercise({ ...draft, muscleGroup: 'arms_biceps' }, 'exercise-1').muscleGroup)
@@ -69,6 +80,7 @@ describe('exercise service', () => {
       type: 'strength',
       unit: 'kg',
       notes: 'Рабочий вес',
+      restSeconds: 90,
       favourite: false
     });
     expect(second).toEqual(first);

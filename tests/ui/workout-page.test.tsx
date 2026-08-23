@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Exercise, Template } from '../../src/db/entities';
 import { WorkoutPage } from '../../src/ui/workouts/workout-page';
 
@@ -12,6 +12,10 @@ const secondExercise: Exercise = {
 const template: Template = {
   id: 'template-1', name: 'Ноги', exercises: [{ exerciseId: 'exercise-1', order: 0, sets: 2, targetReps: 8, targetWeight: 100 }]
 };
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 describe('WorkoutPage', () => {
   it('keeps one exercise in focus without losing collapsed values', async () => {
@@ -91,16 +95,16 @@ describe('WorkoutPage', () => {
     expect(screen.getByLabelText('Вес подхода 1 для Приседания')).toHaveValue(100);
     fireEvent.change(screen.getByLabelText('Повторы подхода 1 для Приседания'), { target: { value: '10' } });
     fireEvent.change(screen.getByLabelText('Вес подхода 1 для Приседания'), { target: { value: '105' } });
-    fireEvent.change(screen.getByLabelText('Время подхода 1 для Приседания'), { target: { value: '60' } });
-    fireEvent.change(screen.getByLabelText('Расстояние подхода 1 для Приседания'), { target: { value: '1.5' } });
-    fireEvent.change(screen.getByLabelText('Отдых после подхода 1 для Приседания'), { target: { value: '90' } });
+    expect(screen.queryByLabelText('Время подхода 1 для Приседания')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Расстояние подхода 1 для Приседания')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Отдых после подхода 1 для Приседания')).not.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Заметки тренировки'), { target: { value: 'Техника стала лучше' } });
     fireEvent.click(screen.getByRole('button', { name: 'Завершить и сохранить тренировку' }));
 
     await waitFor(() => expect(workoutRepository.save).toHaveBeenCalledWith(expect.objectContaining({
       id: 'workout-1', templateId: 'template-1', date: '2026-08-17T12:00:00.000Z',
       notes: 'Техника стала лучше',
-      exercises: [expect.objectContaining({ sets: [expect.objectContaining({ reps: 10, weight: 105, time: 60, distance: 1.5, rest: 90 }), expect.objectContaining({ reps: 8, weight: 100 })] })]
+      exercises: [expect.objectContaining({ sets: [{ reps: 10, weight: 105 }, { reps: 8, weight: 100 }] })]
     })));
     expect(await screen.findByText('Тренировка сохранена')).toBeInTheDocument();
   });
@@ -128,5 +132,111 @@ describe('WorkoutPage', () => {
       id: 'workout-empty', date: '2026-08-17T12:00:00.000Z',
       exercises: [{ exerciseId: 'exercise-1', order: 0, sets: [{ reps: 12 }] }]
     })));
+  });
+
+  it.each([
+    { type: 'strength' as const, expected: { weight: 50, reps: 10 }, absent: ['time', 'distance'] as const },
+    { type: 'cardio' as const, expected: { time: 600, distance: 2.5 }, absent: ['weight', 'reps'] as const },
+    { type: 'time' as const, expected: { time: 45 }, absent: ['weight', 'reps', 'distance'] as const },
+    { type: 'reps' as const, expected: { reps: 20 }, absent: ['weight', 'time', 'distance'] as const }
+  ])('shows and saves only metrics for a $type exercise', async ({ type, expected, absent }) => {
+    const typedExercise: Exercise = { ...exercise, id: `exercise-${type}`, name: 'Тест', type };
+    const workoutRepository = { getAll: vi.fn().mockResolvedValue([]), save: vi.fn().mockResolvedValue(undefined), getById: vi.fn(), remove: vi.fn() };
+    render(<WorkoutPage
+      workoutRepository={workoutRepository}
+      templateRepository={{ getAll: vi.fn().mockResolvedValue([]), save: vi.fn(), getById: vi.fn(), remove: vi.fn() }}
+      exerciseRepository={{ getAll: vi.fn().mockResolvedValue([typedExercise]), save: vi.fn(), getById: vi.fn(), remove: vi.fn() }}
+      createId={() => `workout-${type}`}
+      now={() => '2026-08-17T12:00:00.000Z'}
+    />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /Пустая тренировка/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Добавить Тест' }));
+    const labels = {
+      weight: 'Вес подхода 1 для Тест',
+      reps: 'Повторы подхода 1 для Тест',
+      time: 'Время подхода 1 для Тест',
+      distance: 'Расстояние подхода 1 для Тест'
+    };
+    for (const [field, value] of Object.entries(expected)) {
+      fireEvent.change(screen.getByLabelText(labels[field as keyof typeof labels]), { target: { value: String(value) } });
+    }
+    for (const field of absent) expect(screen.queryByLabelText(labels[field])).not.toBeInTheDocument();
+    expect(screen.queryByText(/rest/i)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Завершить и сохранить тренировку' }));
+
+    await waitFor(() => expect(workoutRepository.save).toHaveBeenCalledWith(expect.objectContaining({
+      exercises: [{ exerciseId: typedExercise.id, order: 0, sets: [expected] }]
+    })));
+  });
+
+  it('runs and resets the configured timer without going below zero', async () => {
+    const timedExercise: Exercise = { ...exercise, restSeconds: 90 };
+    render(<WorkoutPage
+      workoutRepository={{ getAll: vi.fn().mockResolvedValue([]), save: vi.fn(), getById: vi.fn(), remove: vi.fn() }}
+      templateRepository={{ getAll: vi.fn().mockResolvedValue([template]), save: vi.fn(), getById: vi.fn(), remove: vi.fn() }}
+      exerciseRepository={{ getAll: vi.fn().mockResolvedValue([timedExercise]), save: vi.fn(), getById: vi.fn(), remove: vi.fn() }}
+      createId={() => 'workout-timer'}
+      now={() => '2026-08-17T12:00:00.000Z'}
+    />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Начать тренировку по шаблону Ноги' }));
+    const timer = await screen.findByRole('region', { name: 'Таймер отдыха' });
+    expect(timer).toHaveTextContent('01:30');
+    vi.useFakeTimers();
+    fireEvent.click(within(timer).getByRole('button', { name: 'Запустить таймер отдыха' }));
+
+    await act(async () => { vi.advanceTimersByTime(1000); });
+    expect(timer).toHaveTextContent('01:29');
+    await act(async () => { vi.advanceTimersByTime(100_000); });
+    expect(timer).toHaveTextContent('00:00');
+    expect(timer).not.toHaveTextContent('-');
+    fireEvent.click(within(timer).getByRole('button', { name: 'Сбросить таймер' }));
+    expect(timer).toHaveTextContent('01:30');
+  });
+
+  it('does not invent a timer duration for an exercise without the optional setting', async () => {
+    render(<WorkoutPage
+      workoutRepository={{ getAll: vi.fn().mockResolvedValue([]), save: vi.fn(), getById: vi.fn(), remove: vi.fn() }}
+      templateRepository={{ getAll: vi.fn().mockResolvedValue([template]), save: vi.fn(), getById: vi.fn(), remove: vi.fn() }}
+      exerciseRepository={{ getAll: vi.fn().mockResolvedValue([exercise]), save: vi.fn(), getById: vi.fn(), remove: vi.fn() }}
+      createId={() => 'workout-no-timer'}
+      now={() => '2026-08-17T12:00:00.000Z'}
+    />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Начать тренировку по шаблону Ноги' }));
+    expect(screen.queryByRole('region', { name: 'Таймер отдыха' })).not.toBeInTheDocument();
+  });
+
+  it('keeps timer controls bound to the displayed exercise after focus changes', async () => {
+    const timedExercise: Exercise = { ...exercise, restSeconds: 90 };
+    const focusedTemplate: Template = {
+      ...template,
+      exercises: [
+        { exerciseId: exercise.id, order: 0, sets: 1 },
+        { exerciseId: secondExercise.id, order: 1, sets: 1 }
+      ]
+    };
+    render(<WorkoutPage
+      workoutRepository={{ getAll: vi.fn().mockResolvedValue([]), save: vi.fn(), getById: vi.fn(), remove: vi.fn() }}
+      templateRepository={{ getAll: vi.fn().mockResolvedValue([focusedTemplate]), save: vi.fn(), getById: vi.fn(), remove: vi.fn() }}
+      exerciseRepository={{ getAll: vi.fn().mockResolvedValue([timedExercise, secondExercise]), save: vi.fn(), getById: vi.fn(), remove: vi.fn() }}
+      createId={() => 'workout-switch-timer'}
+      now={() => '2026-08-17T12:00:00.000Z'}
+    />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Начать тренировку по шаблону Ноги' }));
+    const timer = await screen.findByRole('region', { name: 'Таймер отдыха' });
+    vi.useFakeTimers();
+    fireEvent.click(within(timer).getByRole('button', { name: 'Запустить таймер отдыха' }));
+    await act(async () => { vi.advanceTimersByTime(1000); });
+    fireEvent.click(screen.getByRole('button', { name: 'Развернуть Жим лёжа' }));
+    fireEvent.click(within(timer).getByRole('button', { name: 'Приостановить таймер отдыха' }));
+    expect(timer).toHaveTextContent('Приседания');
+    fireEvent.click(within(timer).getByRole('button', { name: 'Запустить таймер отдыха' }));
+    await act(async () => { vi.advanceTimersByTime(1000); });
+
+    expect(timer).toHaveTextContent('01:28');
+    expect(timer).toHaveTextContent('Приседания');
   });
 });

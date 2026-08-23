@@ -15,6 +15,11 @@ export const EQUIPMENT_OPTIONS: readonly { value: Equipment; label: string; shor
   { value: 'other', label: 'Другое', shortLabel: 'Другое' }
 ];
 const EQUIPMENT_TYPES = EQUIPMENT_OPTIONS.map(({ value }) => value);
+export const MAX_REST_SECONDS = 3600;
+
+export function isValidRestSeconds(value: unknown): value is number {
+  return Number.isSafeInteger(value) && (value as number) > 0 && (value as number) <= MAX_REST_SECONDS;
+}
 
 export function getEquipmentLabel(equipment?: Equipment): string {
   return EQUIPMENT_OPTIONS.find(({ value }) => value === equipment)?.shortLabel ?? 'Другое';
@@ -32,6 +37,7 @@ export function validateExerciseDraft(draft: ExerciseDraft): string[] {
     type: unknown;
     unit: unknown;
     notes?: unknown;
+    restSeconds?: unknown;
   };
   const errors: string[] = [];
   if (typeof candidate.name !== 'string' || !candidate.name.trim()) {
@@ -39,6 +45,9 @@ export function validateExerciseDraft(draft: ExerciseDraft): string[] {
   }
   if (typeof candidate.notes !== 'undefined' && typeof candidate.notes !== 'string') {
     errors.push('Заметка упражнения указана неверно');
+  }
+  if (typeof candidate.restSeconds !== 'undefined' && !isValidRestSeconds(candidate.restSeconds)) {
+    errors.push(`Время отдыха должно быть целым числом от 1 до ${MAX_REST_SECONDS} секунд`);
   }
   if (typeof candidate.equipment !== 'string' || !isValue(candidate.equipment, EQUIPMENT_TYPES)) {
     errors.push('Снаряд указан неверно');
@@ -72,6 +81,7 @@ export function createExercise(draft: ExerciseDraft, id: string): Exercise {
     type: draft.type,
     unit: draft.unit,
     notes: typeof draft.notes === 'string' ? draft.notes.trim() || undefined : undefined,
+    ...(typeof draft.restSeconds === 'number' ? { restSeconds: draft.restSeconds } : {}),
     favourite: false
   };
 }

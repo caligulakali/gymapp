@@ -12,6 +12,7 @@ const exercise = {
   type: 'strength' as const,
   unit: 'kg' as const,
   notes: 'Контролировать глубину',
+  restSeconds: 90,
   favourite: false
 };
 
@@ -35,6 +36,13 @@ describe('exerciseRepository', () => {
     ]);
   });
 
+  it('clears an optional rest duration without creating a duplicate', async () => {
+    await exerciseRepository.save(exercise);
+    await exerciseRepository.save({ ...exercise, restSeconds: undefined });
+
+    await expect(exerciseRepository.getAll()).resolves.toEqual([{ ...exercise, restSeconds: undefined }]);
+  });
+
   it('keeps one record when the same exercise is saved repeatedly', async () => {
     await exerciseRepository.save(exercise);
     await exerciseRepository.save(exercise);
@@ -54,6 +62,14 @@ describe('exerciseRepository', () => {
     await closeDatabase();
 
     await expect(exerciseRepository.getById(exercise.id)).resolves.toEqual(exercise);
+  });
+
+  it('reads legacy records without a rest duration', async () => {
+    const { restSeconds: _restSeconds, ...legacyExercise } = exercise;
+    await exerciseRepository.save(legacyExercise);
+    await closeDatabase();
+
+    await expect(exerciseRepository.getById(exercise.id)).resolves.toEqual(legacyExercise);
   });
 
   it('migrates legacy records by adding the favourite flag', async () => {

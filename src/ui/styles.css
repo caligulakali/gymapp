@@ -373,3 +373,58 @@ textarea { min-height: 90px; resize: vertical; } select { appearance: none; back
   .workout-finish-bar > span { display: none; }
   .workout-finish-bar .primary-submit { width: 100%; min-width: 0; min-height: 48px; }
 }
+
+/* Optional per-exercise rest timer */
+.exercise-details { display: grid; gap: 10px; }
+.rest-setting { overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: rgba(7,10,18,.42); }
+.rest-setting.is-enabled { border-color: rgba(124,142,255,.26); background: rgba(95,124,255,.055); }
+.rest-setting-toggle { position: relative; display: flex!important; min-height: 62px; align-items: center; gap: 11px!important; padding: 11px 13px; cursor: pointer; }
+.rest-setting-toggle>input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.rest-setting-icon { display: grid; width: 34px; height: 34px; flex: 0 0 34px; place-items: center; border-radius: 10px; color: var(--accent-light); background: rgba(95,124,255,.1); font-size: 1rem; }
+.rest-setting-toggle>span:nth-child(3) { flex: 1; }
+.rest-setting-toggle strong,.rest-setting-toggle small { display: block; }
+.rest-setting-toggle strong { color: #dce1ed; font-size: .74rem; }
+.rest-setting-toggle small { margin-top: 4px; color: var(--muted); font-size: .61rem; font-weight: 450; }
+.rest-setting-check { display: grid; width: 23px; height: 23px; place-items: center; border: 1px solid var(--line-strong); border-radius: 7px; color: transparent; font-size: .68rem; }
+.rest-setting.is-enabled .rest-setting-check { border-color: transparent; color: white; background: var(--gradient); }
+.rest-setting-controls { display: grid; grid-template-columns: minmax(140px,1fr) auto; align-items: end; gap: 12px; padding: 12px 13px 13px; border-top: 1px solid var(--line); }
+.rest-setting-controls>label { display: grid; gap: 6px; color: var(--muted); font-size: .62rem; }
+.rest-seconds-input { position: relative; display: block; }
+.rest-seconds-input input { width: 100%; min-height: 43px; padding-right: 42px; }
+.rest-seconds-input small { position: absolute; top: 50%; right: 12px; color: #6f7990; font-size: .62rem; transform: translateY(-50%); pointer-events: none; }
+.rest-presets { display: flex; gap: 5px; }
+.rest-presets button { min-height: 43px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; color: #8d97ab; background: rgba(255,255,255,.025); font-size: .64rem; font-weight: 700; }
+.rest-presets button.is-selected { border-color: rgba(124,142,255,.28); color: #e5e8ff; background: rgba(95,124,255,.12); }
+
+/* Active workouts only show metrics relevant to the exercise type. */
+.active-set-grid { display: grid; align-items: center; gap: 8px; }
+.active-set-grid.set-grid-1 { grid-template-columns: 40px minmax(100px,1fr) 32px; }
+.active-set-grid.set-grid-2 { grid-template-columns: 40px repeat(2,minmax(100px,1fr)) 32px; }
+.focused-workout-card .active-set-grid.set-header { padding: 0 0 8px; }
+.focused-workout-card .active-set-grid.set-row { margin-bottom: 7px; }
+
+.workout-rest-timer { position: sticky; bottom: 92px; z-index: 13; display: grid; grid-template-columns: minmax(150px,1fr) auto auto; align-items: center; gap: 16px; margin-top: 12px; padding: 11px 12px; border: 1px solid rgba(124,142,255,.2); border-radius: 16px; background: rgba(12,16,28,.94); box-shadow: 0 18px 50px rgba(0,0,0,.32); backdrop-filter: blur(22px); }
+.workout-rest-timer.is-running { border-color: rgba(82,214,162,.24); }
+.workout-rest-timer.is-finished { border-color: rgba(168,112,255,.36); box-shadow: 0 18px 50px rgba(69,45,152,.2); }
+.rest-timer-copy { display: flex; min-width: 0; align-items: center; gap: 10px; }
+.rest-timer-icon { display: grid; width: 35px; height: 35px; flex: 0 0 35px; place-items: center; border-radius: 11px; color: var(--accent-light); background: rgba(95,124,255,.1); font-size: 1rem; }
+.workout-rest-timer.is-running .rest-timer-icon { color: var(--success); background: rgba(82,214,162,.09); }
+.rest-timer-copy small,.rest-timer-copy strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rest-timer-copy small { color: var(--muted); font-size: .57rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+.rest-timer-copy strong { margin-top: 3px; font-size: .72rem; }
+.workout-rest-timer time { min-width: 82px; color: #f2f4ff; font-variant-numeric: tabular-nums; font-size: 1.65rem; font-weight: 850; letter-spacing: -.04em; text-align: center; }
+.rest-timer-actions { display: flex; gap: 6px; }
+.rest-timer-actions button { min-height: 38px; padding: 8px 11px; border: 1px solid var(--line); border-radius: 10px; color: #9ba5b8; background: rgba(255,255,255,.03); font-size: .64rem; font-weight: 750; }
+.rest-timer-actions .timer-primary { border-color: rgba(124,142,255,.25); color: #eef0ff; background: rgba(95,124,255,.14); }
+
+@media (max-width: 760px) {
+  .rest-setting-controls { grid-template-columns: 1fr; }
+  .rest-presets { display: grid; grid-template-columns: repeat(3,1fr); }
+  .active-set-grid.set-grid-1 { grid-template-columns: 28px minmax(0,1fr) 28px; }
+  .active-set-grid.set-grid-2 { grid-template-columns: 28px repeat(2,minmax(0,1fr)) 28px; }
+  .workout-page .active-set-grid input:nth-of-type(n+1) { display: block; }
+  .workout-rest-timer { bottom: calc(140px + env(safe-area-inset-bottom)); grid-template-columns: minmax(0,1fr) auto; gap: 8px; padding: 9px; }
+  .workout-rest-timer time { min-width: 70px; font-size: 1.45rem; }
+  .rest-timer-actions { grid-column: 1/-1; display: grid; grid-template-columns: 1fr 1fr; }
+  .rest-timer-actions button { min-height: 36px; }
+}

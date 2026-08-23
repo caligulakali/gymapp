@@ -41,6 +41,8 @@ describe('ExercisePage', () => {
     fireEvent.change(screen.getByLabelText('Название'), { target: { value: 'Тяга верхнего блока' } });
     fireEvent.click(screen.getByRole('radio', { name: 'Блочный тренажёр' }));
     fireEvent.change(screen.getByLabelText('Мышечная группа'), { target: { value: 'back' } });
+    fireEvent.click(screen.getByLabelText('Использовать таймер отдыха'));
+    fireEvent.change(screen.getByLabelText('Время отдыха'), { target: { value: '120' } });
     fireEvent.click(screen.getByRole('button', { name: 'Сохранить упражнение' }));
 
     await waitFor(() => expect(repository.save).toHaveBeenCalledWith(expect.objectContaining({
@@ -49,6 +51,7 @@ describe('ExercisePage', () => {
       muscleGroup: 'back',
       type: 'strength',
       unit: 'kg',
+      restSeconds: 120,
       favourite: false
     })));
     expect(await screen.findByRole('button', { name: 'Новое упражнение' })).toBeInTheDocument();
@@ -71,6 +74,8 @@ describe('ExercisePage', () => {
     expect(screen.queryByLabelText('Единица веса')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Заметки')).toBeInTheDocument();
     expect(screen.getByLabelText('Избранное')).toBeInTheDocument();
+    expect(screen.getByLabelText('Использовать таймер отдыха')).not.toBeChecked();
+    expect(screen.queryByLabelText('Время отдыха')).not.toBeInTheDocument();
   });
 
   it('saves type, notes and favourite settings', async () => {
@@ -197,14 +202,28 @@ describe('ExercisePage', () => {
   });
 
   it('loads existing optional settings into the editor', async () => {
-    const detailedExercise: Exercise = { ...exercise, type: 'time', notes: 'Медленный темп', favourite: true };
+    const detailedExercise: Exercise = { ...exercise, type: 'time', notes: 'Медленный темп', restSeconds: 75, favourite: true };
     render(<ExercisePage repository={createRepository([detailedExercise])} />);
 
     fireEvent.click(await screen.findByRole('button', { name: 'Редактировать Жим лёжа' }));
 
     expect(screen.getByRole('radio', { name: 'На время' })).toBeChecked();
     expect(screen.getByLabelText('Заметки')).toHaveValue('Медленный темп');
+    expect(screen.getByLabelText('Использовать таймер отдыха')).toBeChecked();
+    expect(screen.getByLabelText('Время отдыха')).toHaveValue(75);
     expect(screen.getByLabelText('Избранное')).toBeChecked();
+  });
+
+  it('clears an existing optional rest duration while editing', async () => {
+    const repository = createRepository([{ ...exercise, restSeconds: 90 }]);
+    render(<ExercisePage repository={repository} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Редактировать Жим лёжа' }));
+    fireEvent.click(screen.getByLabelText('Использовать таймер отдыха'));
+    fireEvent.click(screen.getByRole('button', { name: 'Сохранить изменения' }));
+
+    await waitFor(() => expect(repository.save).toHaveBeenCalled());
+    expect(repository.save.mock.calls[0][0].restSeconds).toBeUndefined();
   });
 
   it('filters the exercise catalogue locally and restores it when cleared', async () => {

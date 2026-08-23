@@ -1,4 +1,5 @@
 import type { Equipment, Exercise, ExerciseType, Template, TemplateExercise, WeightUnit, Workout, WorkoutExercise, WorkoutSet } from '../db/entities';
+import { isValidRestSeconds } from './exercise-service';
 
 export interface ExportData {
   exercises: Exercise[];
@@ -46,6 +47,7 @@ function validateExercise(value: unknown): value is Exercise {
   if ('equipment' in value && typeof value.equipment !== 'undefined' && !EQUIPMENT_TYPES.includes(value.equipment as Equipment)) throw new Error('Упражнение имеет неверный снаряд');
   if (typeof value.favourite !== 'boolean') throw new Error('Признак избранного упражнения указан неверно');
   if ('notes' in value && typeof value.notes !== 'undefined' && typeof value.notes !== 'string') throw new Error('Заметка упражнения указана неверно');
+  if ('restSeconds' in value && typeof value.restSeconds !== 'undefined' && !isValidRestSeconds(value.restSeconds)) throw new Error('Упражнение имеет неверное время отдыха');
   return true;
 }
 
@@ -152,9 +154,9 @@ export function exportCsv(data: ExportData): string {
       ].map(csvCell).join(',')));
     }
   }
-  lines.push('', 'exerciseId,name,equipment,muscleGroup,type,unit,favourite,notes');
+  lines.push('', 'exerciseId,name,equipment,muscleGroup,type,unit,favourite,notes,restSeconds');
   for (const exercise of data.exercises) {
-    lines.push([exercise.id, exercise.name, exercise.equipment, exercise.muscleGroup, exercise.type, exercise.unit, exercise.favourite, exercise.notes].map(csvCell).join(','));
+    lines.push([exercise.id, exercise.name, exercise.equipment, exercise.muscleGroup, exercise.type, exercise.unit, exercise.favourite, exercise.notes, exercise.restSeconds].map(csvCell).join(','));
   }
   return lines.join('\n');
 }

@@ -6,6 +6,7 @@ import type { TemplateRepositoryPort } from '../../domain/template-repository-po
 import type { WorkoutRepositoryPort } from '../../domain/workout-repository-port';
 import type { WorkoutDraftRepositoryPort } from '../../domain/workout-draft-repository-port';
 import { validateWorkoutDraft } from '../../domain/workout-service';
+import { isValidRestSeconds } from '../../domain/exercise-service';
 
 type Props = {
   workoutRepository: WorkoutRepositoryPort;
@@ -19,8 +20,34 @@ type Props = {
 };
 
 type DraftSaveStatus = 'idle' | 'saving' | 'saved' | 'error';
+type SetMetric = Exclude<keyof WorkoutSet, 'rest'>;
+type MetricField = { key: SetMetric; label: string; inputMode: 'decimal' | 'numeric'; placeholder: string; step?: string };
+type RestTimerState = { exerciseId: string; duration: number; remaining: number; running: boolean; endsAt?: number };
 
 const emptySet = (): WorkoutSet => ({});
+
+function getMetricFields(exercise?: Exercise): MetricField[] {
+  const fields: Record<SetMetric, MetricField> = {
+    weight: { key: 'weight', label: `Вес, ${exercise?.unit ?? 'kg'}`, inputMode: 'decimal', placeholder: '—', step: '0.5' },
+    reps: { key: 'reps', label: 'Повторы', inputMode: 'numeric', placeholder: '—' },
+    time: { key: 'time', label: 'Время, сек', inputMode: 'numeric', placeholder: 'сек' },
+    distance: { key: 'distance', label: 'Расстояние, км', inputMode: 'decimal', placeholder: 'км', step: '0.1' }
+  };
+  if (exercise?.type === 'cardio') return [fields.time, fields.distance];
+  if (exercise?.type === 'time') return [fields.time];
+  if (exercise?.type === 'reps') return [fields.reps];
+  return [fields.weight, fields.reps];
+}
+
+function getMetricAriaLabel(metric: SetMetric, setNumber: number, exerciseName: string): string {
+  const labels: Record<SetMetric, string> = { weight: 'Вес', reps: 'Повторы', time: 'Время', distance: 'Расстояние' };
+  return `${labels[metric]} подхода ${setNumber} для ${exerciseName}`;
+}
+
+function formatTimer(seconds: number): string {
+  const minutes = Math.floor(seconds / 60);
+  return `${String(minutes).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+}
 
 function pluralize(count: number, forms: [string, string, string]): string {
   const lastTwo = count % 100;
@@ -41,6 +68,7 @@ export function WorkoutPage({ workoutRepository, templateRepository, exerciseRep
   const [draftLoaded, setDraftLoaded] = useState(!draftRepository);
   const [draftError, setDraftError] = useState<string>();
   const [draftSaveStatus, setDraftSaveStatus] = useState<DraftSaveStatus>('idle');
+  const [restTimer, setRestTimer] = useState<RestTimerState>();
   const draftSaveQueue = useRef(Promise.resolve());
   const draftSaveGeneration = useRef(0);
   const isDiscarding = useRef(false);
@@ -51,6 +79,29 @@ export function WorkoutPage({ workoutRepository, templateRepository, exerciseRep
       setExercises(nextExercises);
     });
   }, [templateRepository, exerciseRepository]);
+
+  useEffect(() => {
+    const selectedExercise = exercises.find((exercise) => exercise.id === expandedExerciseId);
+    setRestTimer((current) => {
+      if (current?.running) return current;
+      if (!isValidRestSeconds(selectedExercise?.restSeconds)) return undefined;
+      if (current?.exerciseId === selectedExercise.id && current.duration === selectedExercise.restSeconds) return current;
+      return { exerciseId: selectedExercise.id, duration: selectedExercise.restSeconds, remaining: selectedExercise.restSeconds, running: false };
+    });
+  }, [exercises, expandedExerciseId]);
+
+  useEffect(() => {
+    if (!restTimer?.running || typeof restTimer.endsAt !== 'number') return;
+    const updateRemaining = () => {
+      setRestTimer((current) => {
+        if (!current?.running || typeof current.endsAt !== 'number') return current;
+        const remaining = Math.max(0, Math.ceil((current.endsAt - Date.now()) / 1000));
+        return remaining === 0 ? { ...current, remaining: 0, running: false, endsAt: undefined } : { ...current, remaining };
+      });
+    };
+    const interval = window.setInterval(updateRemaining, 250);
+    return () => window.clearInterval(interval);
+  }, [restTimer?.endsAt, restTimer?.running]);
 
   useEffect(() => {
     if (!draftRepository) return;
@@ -142,6 +193,29 @@ export function WorkoutPage({ workoutRepository, templateRepository, exerciseRep
     updateActive(nextActive);
   }
 
+  function startRestTimer(): void {
+    if (!restTimer || !isValidRestSeconds(restTimer.duration)) return;
+    const remaining = restTimer.remaining > 0 ? restTimer.remaining : restTimer.duration;
+    setRestTimer({
+      exerciseId: restTimer.exerciseId,
+      duration: restTimer.duration,
+      remaining,
+      running: true,
+      endsAt: Date.now() + remaining * 1000
+    });
+  }
+
+  function pauseRestTimer(): void {
+    setRestTimer((current) => {
+      if (!current?.running || typeof current.endsAt !== 'number') return current;
+      return { ...current, remaining: Math.max(0, Math.ceil((current.endsAt - Date.now()) / 1000)), running: false, endsAt: undefined };
+    });
+  }
+
+  function resetRestTimer(): void {
+    setRestTimer((current) => current ? { ...current, remaining: current.duration, running: false, endsAt: undefined } : current);
+  }
+
   async function save(event: FormEvent) {
     event.preventDefault();
     if (!active) return;
@@ -167,6 +241,7 @@ export function WorkoutPage({ workoutRepository, templateRepository, exerciseRep
     setNotes('');
     setSaved(false);
     setExpandedExerciseId(undefined);
+    setRestTimer(undefined);
     setDraftSaveStatus('idle');
     draftSaveQueue.current = draftSaveQueue.current
       .then(() => draftRepository?.clearDraft())
@@ -195,6 +270,7 @@ export function WorkoutPage({ workoutRepository, templateRepository, exerciseRep
 
   const activeTemplate = templates.find((item) => item.id === active.templateId);
   const availableExercises = exercises.filter((exercise) => !active.exercises.some((item) => item.exerciseId === exercise.id));
+  const restTimerExercise = restTimer ? exercises.find((exercise) => exercise.id === restTimer.exerciseId) : undefined;
 
   return (
     <section className="content-page workout-page" aria-labelledby="active-workout-title">
@@ -207,11 +283,22 @@ export function WorkoutPage({ workoutRepository, templateRepository, exerciseRep
           const name = exercise?.name ?? 'Удалённое упражнение';
           const isExpanded = expandedExerciseId === item.exerciseId;
           const panelId = `workout-exercise-${item.exerciseId}`;
-          return <article className={`workout-card focused-workout-card${isExpanded ? ' is-expanded' : ''}`} key={item.exerciseId}><div className="workout-card-heading"><div><span className="exercise-number">{String(exerciseIndex + 1).padStart(2, '0')}</span><span className="workout-card-title"><h2>{name}</h2><small>{item.sets.length} {pluralize(item.sets.length, ['подход', 'подхода', 'подходов'])}{exercise && ` · ${getMuscleGroupLabel(exercise.muscleGroup)}`}</small></span></div><button className="workout-collapse" type="button" aria-label={`${isExpanded ? 'Свернуть' : 'Развернуть'} ${name}`} aria-expanded={isExpanded} aria-controls={panelId} onClick={() => setExpandedExerciseId(isExpanded ? undefined : item.exerciseId)}><span aria-hidden="true">⌄</span></button></div><div className="workout-card-body" id={panelId} hidden={!isExpanded}><div className="set-header"><span>№</span><span>Вес, {exercise?.unit ?? 'kg'}</span><span>Повторы</span><span>Дополнительно</span></div>{item.sets.map((set, setIndex) => <div className="set-row" key={setIndex}><span className="set-number">{setIndex + 1}</span><input aria-label={`Вес подхода ${setIndex + 1} для ${name}`} inputMode="decimal" placeholder="—" type="number" min="0" step="0.5" value={set.weight ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, 'weight', event.target.value)} /><input aria-label={`Повторы подхода ${setIndex + 1} для ${name}`} inputMode="numeric" placeholder="—" type="number" min="0" value={set.reps ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, 'reps', event.target.value)} /><input aria-label={`Время подхода ${setIndex + 1} для ${name}`} inputMode="numeric" placeholder="сек" type="number" min="0" value={set.time ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, 'time', event.target.value)} /><input aria-label={`Расстояние подхода ${setIndex + 1} для ${name}`} inputMode="decimal" placeholder="км" type="number" min="0" step="0.1" value={set.distance ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, 'distance', event.target.value)} /><input aria-label={`Отдых после подхода ${setIndex + 1} для ${name}`} inputMode="numeric" placeholder="отдых" type="number" min="0" value={set.rest ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, 'rest', event.target.value)} /><button className="set-check" type="button" aria-label={`Удалить подход ${setIndex + 1} для ${name}`} onClick={() => updateActive({ ...active, exercises: active.exercises.map((current, index) => index !== exerciseIndex ? current : { ...current, sets: current.sets.filter((_, currentSet) => currentSet !== setIndex) }) })}>×</button></div>)}<button className="add-set" type="button" onClick={() => updateActive({ ...active, exercises: active.exercises.map((current, index) => index !== exerciseIndex ? current : { ...current, sets: [...current.sets, emptySet()] }) })}>＋ Добавить подход</button></div></article>;
+          const metricFields = getMetricFields(exercise);
+          const metricClass = `set-grid-${metricFields.length}`;
+          return <article className={`workout-card focused-workout-card${isExpanded ? ' is-expanded' : ''}`} key={item.exerciseId}>
+            <div className="workout-card-heading"><div><span className="exercise-number">{String(exerciseIndex + 1).padStart(2, '0')}</span><span className="workout-card-title"><h2>{name}</h2><small>{item.sets.length} {pluralize(item.sets.length, ['подход', 'подхода', 'подходов'])}{exercise && ` · ${getMuscleGroupLabel(exercise.muscleGroup)}`}{exercise?.restSeconds && ` · отдых ${formatTimer(exercise.restSeconds)}`}</small></span></div><button className="workout-collapse" type="button" aria-label={`${isExpanded ? 'Свернуть' : 'Развернуть'} ${name}`} aria-expanded={isExpanded} aria-controls={panelId} onClick={() => setExpandedExerciseId(isExpanded ? undefined : item.exerciseId)}><span aria-hidden="true">⌄</span></button></div>
+            <div className="workout-card-body" id={panelId} hidden={!isExpanded}>
+              <div className={`set-header active-set-grid ${metricClass}`}><span>№</span>{metricFields.map((field) => <span key={field.key}>{field.label}</span>)}<span /></div>
+              {item.sets.map((set, setIndex) => <div className={`set-row active-set-grid ${metricClass}`} key={setIndex}><span className="set-number">{setIndex + 1}</span>{metricFields.map((field) => <input key={field.key} aria-label={getMetricAriaLabel(field.key, setIndex + 1, name)} inputMode={field.inputMode} placeholder={field.placeholder} type="number" min="0" step={field.step} value={set[field.key] ?? ''} onChange={(event) => updateSet(exerciseIndex, setIndex, field.key, event.target.value)} />)}<button className="set-check" type="button" aria-label={`Удалить подход ${setIndex + 1} для ${name}`} onClick={() => updateActive({ ...active, exercises: active.exercises.map((current, index) => index !== exerciseIndex ? current : { ...current, sets: current.sets.filter((_, currentSet) => currentSet !== setIndex) }) })}>×</button></div>)}
+              <button className="add-set" type="button" onClick={() => updateActive({ ...active, exercises: active.exercises.map((current, index) => index !== exerciseIndex ? current : { ...current, sets: [...current.sets, emptySet()] }) })}>＋ Добавить подход</button>
+            </div>
+          </article>;
         })}</div>
         {availableExercises.length > 0 && <section className="add-exercise-row exercise-selector" aria-labelledby="exercise-selector-title"><div className="exercise-selector-heading"><div><p className="eyebrow">Следующий шаг</p><h2 id="exercise-selector-title">Добавить упражнение</h2></div><span>{availableExercises.length}</span></div><p>Выберите из своего справочника — новое упражнение сразу появится в тренировке.</p><div className="exercise-choice-grid">{availableExercises.map((exercise) => <button className="chip-button exercise-choice" type="button" key={exercise.id} aria-label={`Добавить ${exercise.name}`} onClick={() => addExercise(exercise.id)}><span className="exercise-choice-icon" aria-hidden="true">＋</span><span><strong>{exercise.name}</strong><small>{getMuscleGroupLabel(exercise.muscleGroup)}</small></span></button>)}</div></section>}
         {availableExercises.length === 0 && active.exercises.length === 0 && <section className="exercise-selector compact-empty-selector" aria-labelledby="exercise-selector-title"><div className="exercise-selector-heading"><div><p className="eyebrow">Нужен справочник</p><h2 id="exercise-selector-title">Нет доступных упражнений</h2></div></div><p>Добавь упражнения в справочник, затем вернись к тренировке.</p></section>}
-        <label className="notes-field workout-notes">Заметки тренировки<textarea aria-label="Заметки тренировки" placeholder="Как прошла тренировка?" value={notes} onChange={(event) => { const nextNotes = event.target.value; setNotes(nextNotes); scheduleDraft(active, nextNotes); }} /></label><div className="workout-finish-bar"><span><strong>Готово?</strong><small>Проверь подходы перед сохранением</small></span><button className="primary-submit" type="submit">Завершить и сохранить тренировку</button></div>{saved && <p className="saved-message">Тренировка сохранена</p>}
+        <label className="notes-field workout-notes">Заметки тренировки<textarea aria-label="Заметки тренировки" placeholder="Как прошла тренировка?" value={notes} onChange={(event) => { const nextNotes = event.target.value; setNotes(nextNotes); scheduleDraft(active, nextNotes); }} /></label>
+        {restTimer && <section className={`workout-rest-timer${restTimer.running ? ' is-running' : ''}${restTimer.remaining === 0 ? ' is-finished' : ''}`} role="region" aria-label="Таймер отдыха"><div className="rest-timer-copy"><span className="rest-timer-icon" aria-hidden="true">◷</span><span><small>{restTimer.remaining === 0 ? 'Отдых завершён' : 'Таймер отдыха'}</small><strong>{restTimerExercise?.name ?? 'Упражнение'}</strong></span></div><time aria-live="polite">{formatTimer(restTimer.remaining)}</time><div className="rest-timer-actions">{restTimer.running ? <button type="button" aria-label="Приостановить таймер отдыха" onClick={pauseRestTimer}>Пауза</button> : <button className="timer-primary" type="button" aria-label="Запустить таймер отдыха" onClick={startRestTimer}>{restTimer.remaining === 0 ? 'Ещё раз' : 'Старт'}</button>}<button type="button" aria-label="Сбросить таймер" onClick={resetRestTimer}>Сброс</button></div></section>}
+        <div className="workout-finish-bar"><span><strong>Готово?</strong><small>Проверь подходы перед сохранением</small></span><button className="primary-submit" type="submit">Завершить и сохранить тренировку</button></div>{saved && <p className="saved-message">Тренировка сохранена</p>}
       </form>
     </section>
   );

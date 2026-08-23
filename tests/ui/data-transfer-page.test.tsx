@@ -23,15 +23,32 @@ describe('DataTransferPage', () => {
   it('imports a selected gymapp file and shows success', async () => {
     const repo = repository();
     const onChanged = vi.fn();
-    const payload = JSON.stringify({ format: 'gymapp', version: 1, exportedAt: '2026-08-18T12:00:00.000Z', ...data });
+    const importedData: ExportData = { ...data, exercises: [{ id: 'squat', name: 'Приседания', muscleGroup: 'legs', type: 'strength', unit: 'kg', restSeconds: 90, favourite: false }] };
+    const payload = JSON.stringify({ format: 'gymapp', version: 1, exportedAt: '2026-08-18T12:00:00.000Z', ...importedData });
     render(<DataTransferPage repository={repo} now={() => '2026-08-18T12:00:00.000Z'} download={vi.fn()} confirmImport={() => true} onChanged={onChanged} />);
 
     fireEvent.change(screen.getByLabelText('Импортировать файл .gymapp'), {
       target: { files: [new File([payload], 'backup.gymapp', { type: 'application/json' })] }
     });
 
-    await waitFor(() => expect(repo.replaceData).toHaveBeenCalledWith(data));
+    await waitFor(() => expect(repo.replaceData).toHaveBeenCalledWith(importedData));
     expect(onChanged).toHaveBeenCalledOnce();
     expect(await screen.findByText('Данные успешно восстановлены')).toBeInTheDocument();
+  });
+
+  it('rejects an invalid rest duration before replacing local data', async () => {
+    const repo = repository();
+    const payload = JSON.stringify({
+      format: 'gymapp', version: 1, exportedAt: '2026-08-18T12:00:00.000Z', templates: [], workouts: [],
+      exercises: [{ id: 'squat', name: 'Приседания', muscleGroup: 'legs', type: 'strength', unit: 'kg', restSeconds: -10, favourite: false }]
+    });
+    render(<DataTransferPage repository={repo} now={() => '2026-08-18T12:00:00.000Z'} download={vi.fn()} confirmImport={() => true} />);
+
+    fireEvent.change(screen.getByLabelText('Импортировать файл .gymapp'), {
+      target: { files: [new File([payload], 'broken.gymapp', { type: 'application/json' })] }
+    });
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('время отдыха');
+    expect(repo.replaceData).not.toHaveBeenCalled();
   });
 });

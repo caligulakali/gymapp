@@ -14,6 +14,7 @@ const exercises: Exercise[] = [{
   muscleGroup: 'legs',
   type: 'strength',
   unit: 'kg',
+  restSeconds: 90,
   favourite: true
 }];
 
@@ -44,6 +45,17 @@ describe('data transfer service', () => {
     expect(importGymApp(exported)).toEqual(data);
   });
 
+  it('imports a legacy version 1 exercise without a rest duration', () => {
+    const legacyExercise = { ...exercises[0] };
+    delete legacyExercise.restSeconds;
+    const payload = JSON.stringify({
+      format: 'gymapp', version: 1, exportedAt: '2026-08-18T12:00:00.000Z',
+      exercises: [legacyExercise], templates, workouts
+    });
+
+    expect(importGymApp(payload).exercises).toEqual([legacyExercise]);
+  });
+
   it('exports a complete JSON copy without mutating input', () => {
     const snapshot = structuredClone(data);
 
@@ -55,6 +67,8 @@ describe('data transfer service', () => {
     const csv = exportCsv(data);
 
     expect(csv).toContain('workoutId,date,templateId,exerciseId,order,set,weight,reps,time,distance,rest,notes');
+    expect(csv).toContain('exerciseId,name,equipment,muscleGroup,type,unit,favourite,notes,restSeconds');
+    expect(csv).toContain('squat,"\u041f\u0440\u0438\u0441\u0435\u0434, ""\u043a\u043b\u0430\u0441\u0441\u0438\u043a\u0430""",,legs,strength,kg,true,,90');
     expect(csv).toContain('"Присед, ""классика"""');
     expect(csv).toContain('workout-1,2026-08-18T10:00:00.000Z,legs-day,squat,0,1,100,8,,,90,Хорошая техника');
   });
@@ -83,5 +97,14 @@ describe('data transfer service', () => {
     expect(() => importGymApp('{"format":"other","version":1}')).toThrow('формат');
     expect(() => importGymApp(JSON.stringify({ format: 'gymapp', version: 2, exercises: [], templates: [], workouts: [] }))).toThrow('версия');
     expect(() => importGymApp(JSON.stringify({ format: 'gymapp', version: 1, exportedAt: '2026-08-18T12:00:00.000Z', exercises: [{ ...exercises[0], id: 'squat' }, exercises[0]], templates: [], workouts: [] }))).toThrow('дубликат');
+  });
+
+  it.each([0, -1, 1.5, 3601, Number.MAX_SAFE_INTEGER + 1, 1e308, Number.NaN, Number.POSITIVE_INFINITY, '90'])('rejects an invalid imported rest duration: %s', (restSeconds) => {
+    const payload = JSON.stringify({
+      format: 'gymapp', version: 1, exportedAt: '2026-08-18T12:00:00.000Z',
+      exercises: [{ ...exercises[0], restSeconds }], templates: [], workouts: []
+    });
+
+    expect(() => importGymApp(payload)).toThrow('время отдыха');
   });
 });

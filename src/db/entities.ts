@@ -20,6 +20,7 @@ export interface Exercise {
   type: ExerciseType;
   unit: WeightUnit;
   notes?: string;
+  restSeconds?: number;
   favourite: boolean;
 }
 

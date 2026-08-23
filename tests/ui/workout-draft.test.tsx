@@ -51,15 +51,20 @@ describe('WorkoutPage draft', () => {
 
   it('restores a saved draft and clears it after completion', async () => {
     const repos = repositories();
-    const draft = { id: 'draft-1', date: '2026-08-18T10:00:00.000Z', notes: 'Черновик', exercises: [{ exerciseId: 'squat', order: 0, sets: [{ reps: 8 }] }] };
+    const draft = { id: 'draft-1', date: '2026-08-18T10:00:00.000Z', notes: 'Черновик', exercises: [{ exerciseId: 'squat', order: 0, sets: [{ reps: 8, time: 60, distance: 1.5, rest: 90 }] }] };
     repos.draftRepository.getDraft.mockResolvedValue(draft);
     render(<WorkoutPage {...repos} createId={() => 'new-id'} now={() => '2026-08-18T10:00:00.000Z'} confirmDiscard={() => true} />);
 
     expect(await screen.findByRole('heading', { name: 'Тренировка: Свободная' })).toBeInTheDocument();
     expect(screen.getByLabelText('Повторы подхода 1 для Приседания')).toHaveValue(8);
+    expect(screen.queryByLabelText('Время подхода 1 для Приседания')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Повторы подхода 1 для Приседания'), { target: { value: '9' } });
     fireEvent.click(screen.getByRole('button', { name: 'Завершить и сохранить тренировку' }));
 
     await waitFor(() => expect(repos.draftRepository.clearDraft).toHaveBeenCalled());
+    expect(repos.workoutRepository.save).toHaveBeenCalledWith(expect.objectContaining({
+      exercises: [{ exerciseId: 'squat', order: 0, sets: [{ reps: 9, time: 60, distance: 1.5, rest: 90 }] }]
+    }));
   });
 
   it('allows discarding a draft after confirmation', async () => {
