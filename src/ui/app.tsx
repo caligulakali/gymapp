@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { exerciseRepository } from '../db/exercise-repository';
 import { templateRepository } from '../db/template-repository';
 import { workoutRepository } from '../db/workout-repository';
@@ -19,6 +19,20 @@ import type { DataTransferRepositoryPort } from '../domain/data-transfer-reposit
 type Section = 'home' | 'history' | 'exercises' | 'templates' | 'data-transfer' | 'workout';
 type AppProps = { exerciseRepository?: ExerciseRepositoryPort; templateRepository?: TemplateRepositoryPort; workoutRepository?: WorkoutRepositoryPort; dataTransferRepository?: DataTransferRepositoryPort };
 type IconName = 'home' | 'history' | 'exercise' | 'template' | 'data' | 'shield';
+
+const sectionPaths: Record<Section, string> = {
+  home: '/',
+  history: '/history',
+  exercises: '/exercises',
+  templates: '/templates',
+  'data-transfer': '/data',
+  workout: '/workout'
+};
+
+function getSectionFromPath(pathname: string): Section | undefined {
+  const normalizedPath = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname;
+  return (Object.entries(sectionPaths) as [Section, string][]).find(([, path]) => path === normalizedPath)?.[0];
+}
 
 const navItems: { id: Exclude<Section, 'workout'>; label: string; icon: IconName }[] = [
   { id: 'home', label: 'Обзор', icon: 'home' },
@@ -45,13 +59,31 @@ function Brand() {
 }
 
 export function App({ exerciseRepository: exercises = exerciseRepository, templateRepository: templates = templateRepository, workoutRepository: workouts = workoutRepository, dataTransferRepository: data = dataTransferRepository }: AppProps) {
-  const [section, setSection] = useState<Section>('home');
+  const [section, setSection] = useState<Section>(() => getSectionFromPath(window.location.pathname) ?? 'home');
   const [workoutList, setWorkoutList] = useState<Awaited<ReturnType<WorkoutRepositoryPort['getAll']>>>([]);
   const [exerciseList, setExerciseList] = useState<Awaited<ReturnType<ExerciseRepositoryPort['getAll']>>>([]);
   const [templateList, setTemplateList] = useState<Awaited<ReturnType<TemplateRepositoryPort['getAll']>>>([]);
   useEffect(() => { void workouts.getAll().then(setWorkoutList).catch(() => setWorkoutList([])); }, [workouts]);
   useEffect(() => { void Promise.all([exercises.getAll(), templates.getAll()]).then(([nextExercises, nextTemplates]) => { setExerciseList(nextExercises); setTemplateList(nextTemplates); }).catch(() => { setExerciseList([]); setTemplateList([]); }); }, [exercises, templates]);
-  const navigate = (next: Section) => setSection(next);
+  useEffect(() => {
+    const syncRoute = () => {
+      const nextSection = getSectionFromPath(window.location.pathname);
+      if (nextSection) {
+        setSection(nextSection);
+        return;
+      }
+      window.history.replaceState(null, '', sectionPaths.home);
+      setSection('home');
+    };
+    window.addEventListener('popstate', syncRoute);
+    syncRoute();
+    return () => window.removeEventListener('popstate', syncRoute);
+  }, []);
+  const navigate = useCallback((next: Section) => {
+    const path = sectionPaths[next];
+    if (window.location.pathname !== path) window.history.pushState(null, '', path);
+    setSection(next);
+  }, []);
   const reloadAll = () => { void Promise.all([workouts.getAll(), exercises.getAll(), templates.getAll()]).then(([nextWorkouts, nextExercises, nextTemplates]) => { setWorkoutList(nextWorkouts); setExerciseList(nextExercises); setTemplateList(nextTemplates); }); };
   const page = section === 'home' ? <DashboardPage workouts={workoutList} onStartWorkout={() => navigate('workout')} onNavigate={navigate} /> : section === 'history' ? <HistoryPage workouts={workoutList} repository={workouts} templates={templateList} exercises={exerciseList} onChanged={reloadAll} /> : section === 'exercises' ? <ExercisePage repository={exercises} onChanged={reloadAll} /> : section === 'templates' ? <TemplatePage templateRepository={templates} exerciseRepository={exercises} onChanged={reloadAll} /> : section === 'data-transfer' ? <DataTransferPage repository={data} onChanged={reloadAll} /> : <WorkoutPage workoutRepository={workouts} templateRepository={templates} exerciseRepository={exercises} draftRepository={workoutDraftRepository} createId={() => crypto.randomUUID()} now={() => new Date().toISOString()} onSaved={() => { reloadAll(); navigate('history'); }} />;
   const renderNav = (mobile = false) => <nav aria-label={mobile ? 'Мобильная навигация' : 'Основная навигация'}>{navItems.map((item) => {

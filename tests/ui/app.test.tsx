@@ -1,8 +1,12 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from '../../src/ui/app';
 
 describe('App', () => {
+  beforeEach(() => {
+    window.history.replaceState(null, '', '/');
+  });
+
   it('shows the workout journal entry point in Russian', () => {
     render(<App />);
 
@@ -23,6 +27,27 @@ describe('App', () => {
     fireEvent.click(within(screen.getByRole('navigation', { name: 'Основная навигация' })).getByRole('button', { name: 'Упражнения' }));
 
     expect(screen.getByRole('heading', { name: 'Упражнения' })).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/exercises');
+  });
+
+  it('opens a page directly from its URL', async () => {
+    window.history.replaceState(null, '', '/templates');
+
+    render(<App />);
+
+    expect(await screen.findByRole('heading', { name: 'Шаблоны' })).toBeInTheDocument();
+    expect(within(screen.getByRole('navigation', { name: 'Основная навигация' })).getByRole('button', { name: 'Шаблоны' })).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('follows browser history navigation', async () => {
+    render(<App />);
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Основная навигация' })).getByRole('button', { name: 'История' }));
+    expect(await screen.findByRole('heading', { name: 'История' })).toBeInTheDocument();
+
+    window.history.back();
+    window.dispatchEvent(new PopStateEvent('popstate'));
+
+    expect(await screen.findByRole('button', { name: 'Начать тренировку' })).toBeInTheDocument();
   });
 
   it('opens the templates section from the main navigation', () => {
