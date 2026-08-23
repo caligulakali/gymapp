@@ -6,6 +6,7 @@ import { ExercisePage } from '../../src/ui/exercises/exercise-page';
 const exercise: Exercise = {
   id: 'exercise-1',
   name: 'Жим лёжа',
+  equipment: 'barbell',
   muscleGroup: 'chest',
   type: 'strength',
   unit: 'kg',
@@ -38,26 +39,37 @@ describe('ExercisePage', () => {
     expect(screen.queryByLabelText('Название')).not.toBeInTheDocument();
     await openNewExercise();
     fireEvent.change(screen.getByLabelText('Название'), { target: { value: 'Тяга верхнего блока' } });
+    fireEvent.click(screen.getByRole('radio', { name: 'Блочный тренажёр' }));
     fireEvent.change(screen.getByLabelText('Мышечная группа'), { target: { value: 'back' } });
-    fireEvent.change(screen.getByLabelText('Тип'), { target: { value: 'strength' } });
-    fireEvent.change(screen.getByLabelText('Единица веса'), { target: { value: 'kg' } });
-    expect(screen.queryByLabelText('Заметки')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Дополнительно' }));
-    fireEvent.change(screen.getByLabelText('Заметки'), { target: { value: 'Техника' } });
-    fireEvent.click(screen.getByLabelText('Избранное'));
     fireEvent.click(screen.getByRole('button', { name: 'Сохранить упражнение' }));
 
     await waitFor(() => expect(repository.save).toHaveBeenCalledWith(expect.objectContaining({
       name: 'Тяга верхнего блока',
+      equipment: 'cable',
       muscleGroup: 'back',
       type: 'strength',
       unit: 'kg',
-      notes: 'Техника',
-      favourite: true
+      favourite: false
     })));
     expect(await screen.findByRole('button', { name: 'Новое упражнение' })).toBeInTheDocument();
     expect(screen.queryByLabelText('Название')).not.toBeInTheDocument();
     expect(screen.getByText('Тяга верхнего блока')).toBeInTheDocument();
+  });
+
+  it('keeps creation focused on name, equipment and muscle group', async () => {
+    render(<ExercisePage repository={createRepository()} />);
+
+    await openNewExercise();
+
+    expect(screen.getByLabelText('Название')).toBeInTheDocument();
+    const equipment = screen.getByRole('radiogroup', { name: 'Снаряд' });
+    expect(within(equipment).getByRole('radio', { name: 'Гантели' })).toBeInTheDocument();
+    expect(within(equipment).getByRole('radio', { name: 'Штанга' })).toBeInTheDocument();
+    expect(within(equipment).getByRole('radio', { name: 'Тренажёр' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Мышечная группа')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Тип')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Единица веса')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Дополнительно' })).not.toBeInTheDocument();
   });
 
   it('returns from a new exercise without saving', async () => {
@@ -155,19 +167,6 @@ describe('ExercisePage', () => {
     await waitFor(() => expect(repository.save).toHaveBeenCalledWith(expect.objectContaining({
       muscleGroup: 'arms_biceps'
     })));
-  });
-
-  it('uses visual controls for exercise type and weight unit', async () => {
-    render(<ExercisePage repository={createRepository()} />);
-
-    await openNewExercise();
-    fireEvent.click(screen.getByRole('button', { name: 'Выбрать тип упражнения' }));
-    fireEvent.click(screen.getByRole('radio', { name: 'На время' }));
-
-    expect(screen.getByLabelText('Тип')).toHaveValue('time');
-    expect(screen.getByLabelText('Единица веса')).toHaveValue('kg');
-    expect(screen.queryByRole('radio', { name: 'Выбрать фунты' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Выбрать тип упражнения' })).toHaveTextContent('На время');
   });
 
   it('shows the muscle group label next to the exercise', async () => {

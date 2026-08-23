@@ -7,6 +7,7 @@ import { resetDatabase, exerciseRepository } from '../../src/db/exercise-reposit
 const exercise = {
   id: 'exercise-1',
   name: 'Приседания со штангой',
+  equipment: 'barbell' as const,
   muscleGroup: 'legs' as const,
   type: 'strength' as const,
   unit: 'kg' as const,
@@ -69,5 +70,27 @@ describe('exerciseRepository', () => {
     legacyDatabase.close();
 
     await expect(exerciseRepository.getById(exercise.id)).resolves.toMatchObject({ favourite: false });
+  });
+
+  it('migrates existing exercises with a safe equipment fallback', async () => {
+    const legacyDatabase = new Dexie('gymapp');
+    legacyDatabase.version(5).stores({
+      exercises: 'id, name, muscleGroup, type, favourite',
+      templates: 'id, name',
+      workouts: 'id, date, templateId',
+      drafts: 'id'
+    });
+    await legacyDatabase.open();
+    await legacyDatabase.table('exercises').put({
+      id: exercise.id,
+      name: exercise.name,
+      muscleGroup: exercise.muscleGroup,
+      type: exercise.type,
+      unit: exercise.unit,
+      favourite: false
+    });
+    legacyDatabase.close();
+
+    await expect(exerciseRepository.getById(exercise.id)).resolves.toMatchObject({ equipment: 'other' });
   });
 });

@@ -8,6 +8,8 @@ describe('App', () => {
 
     expect(screen.getByRole('heading', { name: 'GymApp' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Начать тренировку' })).toBeInTheDocument();
+    expect(screen.queryByText('Офлайн')).not.toBeInTheDocument();
+    expect(document.querySelector('.mobile-header')).not.toBeInTheDocument();
   });
 
   it('opens the exercises section from the main navigation', () => {

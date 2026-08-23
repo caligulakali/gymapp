@@ -3,6 +3,7 @@ import { createExercise, validateExerciseDraft } from '../../src/domain/exercise
 
 const draft = {
   name: '  Жим лёжа  ',
+  equipment: 'barbell' as const,
   muscleGroup: 'chest' as const,
   type: 'strength' as const,
   unit: 'kg' as const,
@@ -25,6 +26,9 @@ describe('exercise service', () => {
     );
     expect(validateExerciseDraft({ ...draft, unit: 'unknown' as never })).toContain(
       'Единица веса указана неверно'
+    );
+    expect(validateExerciseDraft({ ...draft, equipment: 'unknown' as never })).toContain(
+      'Снаряд указан неверно'
     );
   });
 
@@ -60,6 +64,7 @@ describe('exercise service', () => {
     expect(first).toEqual({
       id: 'exercise-1',
       name: 'Жим лёжа',
+      equipment: 'barbell',
       muscleGroup: 'chest',
       type: 'strength',
       unit: 'kg',

@@ -62,6 +62,7 @@ describe('templateRepository', () => {
     await expect(exerciseRepository.getById('exercise-1')).resolves.toEqual({
       id: 'exercise-1',
       name: 'Приседания',
+      equipment: 'other',
       muscleGroup: 'legs',
       type: 'strength',
       unit: 'kg',
