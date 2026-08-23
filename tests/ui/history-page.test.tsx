@@ -49,6 +49,21 @@ describe('HistoryPage', () => {
     expect(repo.save).not.toHaveBeenCalled();
   });
 
+  it('edits time, distance and rest for a completed workout', async () => {
+    const repo = repository();
+    render(<HistoryPage workouts={[workout]} repository={repo} exercises={[exercise]} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Открыть тренировку Свободная тренировка' }));
+    fireEvent.change(screen.getByLabelText('Время подхода 1 для Приседания'), { target: { value: '90' } });
+    fireEvent.change(screen.getByLabelText('Расстояние подхода 1 для Приседания'), { target: { value: '1.5' } });
+    fireEvent.change(screen.getByLabelText('Отдых после подхода 1 для Приседания'), { target: { value: '60' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Сохранить изменения' }));
+
+    await waitFor(() => expect(repo.save).toHaveBeenCalledWith(expect.objectContaining({
+      exercises: [{ exerciseId: 'squat', order: 0, sets: [{ weight: 100, reps: 8, time: 90, distance: 1.5, rest: 60 }] }]
+    })));
+  });
+
   it('shows exercise names and a safe fallback instead of internal ids', () => {
     const repo = repository();
     const missingExerciseWorkout: Workout = {
