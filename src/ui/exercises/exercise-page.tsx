@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { createExercise, EQUIPMENT_OPTIONS, getEquipmentLabel, type ExerciseDraft } from '../../domain/exercise-service';
 import { getMuscleGroupLabel, MUSCLE_CATEGORIES } from '../../domain/muscle-groups';
-import type { Equipment, Exercise, MuscleGroup } from '../../db/entities';
+import type { Equipment, Exercise, ExerciseType, MuscleGroup } from '../../db/entities';
 import type { ExerciseRepositoryPort } from '../../domain/exercise-repository-port';
 
 type ExercisePageProps = {
@@ -16,6 +16,12 @@ type FormState = ExerciseDraft & { favourite: boolean };
 type CatalogueFilter = 'all' | 'favourites';
 
 const EMPTY_FORM: FormState = { name: '', equipment: 'dumbbells', muscleGroup: 'chest', type: 'strength', unit: 'kg', notes: '', favourite: false };
+const TYPE_OPTIONS: readonly { value: ExerciseType; label: string; hint: string }[] = [
+  { value: 'strength', label: 'Силовое', hint: 'Вес и повторы' },
+  { value: 'cardio', label: 'Кардио', hint: 'Время и расстояние' },
+  { value: 'time', label: 'На время', hint: 'Продолжительность' },
+  { value: 'reps', label: 'На количество', hint: 'Повторы' }
+];
 
 function makeId(): string {
   return crypto.randomUUID();
@@ -113,6 +119,8 @@ export function ExercisePage({ repository, createId = makeId, onSelectExercise, 
         <label className="prominent-field"><span>1 · Название</span><input aria-label="Название" autoFocus placeholder="Например, жим гантелей" value={form.name} onChange={(event) => updateForm('name', event.target.value)} /></label>
         <fieldset className="simple-choice-field"><legend>2 · Снаряд</legend><div className="equipment-grid" role="radiogroup" aria-label="Снаряд">{EQUIPMENT_OPTIONS.map((option) => <button className={option.value === form.equipment ? 'equipment-option is-selected' : 'equipment-option'} type="button" role="radio" aria-checked={option.value === form.equipment} aria-label={option.label} key={option.value} onClick={() => updateForm('equipment', option.value as Equipment)}><span aria-hidden="true" />{option.label}</button>)}</div></fieldset>
         <section className="simple-choice-field muscle-choice" aria-labelledby="muscle-section-title"><h3 id="muscle-section-title">3 · Группа мышц</h3><label className="muscle-group-field"><span className="muscle-picker"><select className="muscle-group-native-select" aria-label="Мышечная группа" value={form.muscleGroup} onChange={(event) => updateForm('muscleGroup', event.target.value as MuscleGroup)} tabIndex={-1}>{MUSCLE_CATEGORIES.map((category) => <optgroup key={category.value} label={category.label}>{category.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</optgroup>)}</select><button className={`muscle-picker-trigger${isMusclePickerOpen ? ' is-open' : ''}`} type="button" aria-label="Выбрать мышечную группу" aria-haspopup="listbox" aria-expanded={isMusclePickerOpen} onClick={() => setIsMusclePickerOpen((current) => !current)}><span><strong>{getMuscleGroupLabel(form.muscleGroup)}</strong><small>Нажми, чтобы изменить</small></span><span className="muscle-picker-chevron" aria-hidden="true">⌄</span></button>{isMusclePickerOpen && <div className="muscle-picker-menu" role="listbox" aria-label="Группы мышц">{MUSCLE_CATEGORIES.map((category) => <div className="muscle-picker-category" key={category.value} role="group" aria-label={category.label}><div className="muscle-picker-category-heading"><span>{category.label}</span></div><div className="muscle-picker-options">{category.options.map((option) => <button className={option.value === form.muscleGroup ? 'muscle-picker-option is-selected' : 'muscle-picker-option'} type="button" role="option" aria-selected={option.value === form.muscleGroup} key={option.value} onClick={() => { updateForm('muscleGroup', option.value); setIsMusclePickerOpen(false); }}><span>{option.label}</span>{option.value === form.muscleGroup && <span aria-hidden="true">✓</span>}</button>)}</div></div>)}</div>}</span></label></section>
+        <fieldset className="simple-choice-field exercise-type-field"><legend>4 · Как считать результат</legend><div className="type-picker-options" role="radiogroup" aria-label="Тип упражнения">{TYPE_OPTIONS.map((option) => <button className={option.value === form.type ? 'type-picker-option is-selected' : 'type-picker-option'} type="button" role="radio" aria-checked={option.value === form.type} aria-label={option.label} key={option.value} onClick={() => updateForm('type', option.value)}><span className="type-option-dot" aria-hidden="true">{option.value === form.type ? '✓' : ''}</span><span><strong>{option.label}</strong><small>{option.hint}</small></span></button>)}</div></fieldset>
+        <section className="simple-choice-field exercise-details" aria-labelledby="exercise-details-title"><h3 id="exercise-details-title">5 · Детали</h3><label className="notes-field exercise-notes-field"><span>Заметки</span><textarea aria-label="Заметки" maxLength={240} placeholder="Техника, темп или настройки тренажёра" value={form.notes ?? ''} onChange={(event) => updateForm('notes', event.target.value)} /></label><label className={`favourite-toggle${form.favourite ? ' is-selected' : ''}`}><input className="favourite-input" type="checkbox" aria-label="Избранное" checked={form.favourite} onChange={(event) => updateForm('favourite', event.target.checked)} /><span className="favourite-star" aria-hidden="true">★</span><span><strong>Добавить в избранное</strong><small>Будет выше в списках</small></span><span className="favourite-check" aria-hidden="true">{form.favourite ? '✓' : ''}</span></label></section>
         {error && <p role="alert">{error}</p>}
         <div className="editor-actions"><button className="ghost-button" type="button" onClick={closeEditor}>Отмена</button><button className="primary-submit save-exercise-button" type="submit">{editingId ? 'Сохранить изменения' : 'Сохранить упражнение'} <span aria-hidden="true">→</span></button></div>
       </form>

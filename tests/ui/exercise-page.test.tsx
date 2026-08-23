@@ -56,7 +56,7 @@ describe('ExercisePage', () => {
     expect(screen.getByText('Тяга верхнего блока')).toBeInTheDocument();
   });
 
-  it('keeps creation focused on name, equipment and muscle group', async () => {
+  it('keeps all exercise settings available in the streamlined form', async () => {
     render(<ExercisePage repository={createRepository()} />);
 
     await openNewExercise();
@@ -67,9 +67,29 @@ describe('ExercisePage', () => {
     expect(within(equipment).getByRole('radio', { name: 'Штанга' })).toBeInTheDocument();
     expect(within(equipment).getByRole('radio', { name: 'Тренажёр' })).toBeInTheDocument();
     expect(screen.getByLabelText('Мышечная группа')).toBeInTheDocument();
-    expect(screen.queryByLabelText('Тип')).not.toBeInTheDocument();
+    expect(screen.getByRole('radiogroup', { name: 'Тип упражнения' })).toBeInTheDocument();
     expect(screen.queryByLabelText('Единица веса')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Дополнительно' })).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Заметки')).toBeInTheDocument();
+    expect(screen.getByLabelText('Избранное')).toBeInTheDocument();
+  });
+
+  it('saves type, notes and favourite settings', async () => {
+    const repository = createRepository();
+    render(<ExercisePage repository={repository} createId={() => 'exercise-new'} />);
+
+    await openNewExercise();
+    fireEvent.change(screen.getByLabelText('Название'), { target: { value: 'Беговая дорожка' } });
+    fireEvent.click(screen.getByRole('radio', { name: 'Кардио' }));
+    fireEvent.change(screen.getByLabelText('Заметки'), { target: { value: 'Наклон 3%' } });
+    fireEvent.click(screen.getByLabelText('Избранное'));
+    fireEvent.click(screen.getByRole('button', { name: 'Сохранить упражнение' }));
+
+    await waitFor(() => expect(repository.save).toHaveBeenCalledWith(expect.objectContaining({
+      id: 'exercise-new',
+      type: 'cardio',
+      notes: 'Наклон 3%',
+      favourite: true
+    })));
   });
 
   it('returns from a new exercise without saving', async () => {
@@ -174,6 +194,17 @@ describe('ExercisePage', () => {
     render(<ExercisePage repository={createRepository([detailedExercise])} />);
 
     expect(await within(screen.getByLabelText('Список упражнений')).findByText('Бицепс')).toBeInTheDocument();
+  });
+
+  it('loads existing optional settings into the editor', async () => {
+    const detailedExercise: Exercise = { ...exercise, type: 'time', notes: 'Медленный темп', favourite: true };
+    render(<ExercisePage repository={createRepository([detailedExercise])} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Редактировать Жим лёжа' }));
+
+    expect(screen.getByRole('radio', { name: 'На время' })).toBeChecked();
+    expect(screen.getByLabelText('Заметки')).toHaveValue('Медленный темп');
+    expect(screen.getByLabelText('Избранное')).toBeChecked();
   });
 
   it('filters the exercise catalogue locally and restores it when cleared', async () => {
